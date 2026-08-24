@@ -22,7 +22,7 @@
   - 매 학기 명단 정리 작업 발생
 - 분반에 묶인 OPERATOR: 분반 보관 처리 순간 운영(쓰기) 권한 자동 상실 - 열람은 유지
   - 권한 회수를 아무도 기억할 필요 없음
-  - 구현: 보관 분반은 누구도 변경 불가, ADMIN은 보관 해제 후 변경. 상세: [cohort/design.md](cohort/design.md) 1절·8절-3
+  - 구현: 보관 분반은 누구도 변경 불가, ADMIN은 보관 해제 후 변경. 상세: [guide/design.md](guide/design.md) 1절·8절-3
 
 ## 2. 판정 순서 - 모든 API 공통
 
@@ -38,7 +38,7 @@
 ※ 보관(ARCHIVED) 분반에 대한 쓰기 거부는 이 4단계 밖 - 권한이 아니라 도메인 규칙:
 
 - 응답: `409 COHORT_ARCHIVED` (403 아님)
-- 상세: [cohort/design.md](cohort/design.md) 2절
+- 상세: [guide/design.md](guide/design.md) 2절
 
 ## 3. 권한 매트릭스
 

@@ -1,7 +1,7 @@
 # Enrollment(소속) - 수강생 배정 슬라이스 설계
 
 > 확정: 2026-08-20 (BE 이슈 #4, PR #5 예정)
-> 기준 규약: [cohort/design.md](../cohort/design.md) 3절·4절 - 이 문서는 그 규약에 추가되는 결정만 기록
+> 기준 규약: [guide/design.md](../guide/design.md) 3절·4절 - 이 문서는 그 규약에 추가되는 결정만 기록
 > 소속 도메인의 나머지(내 분반, 명부, 운영진 지정/해제): Cohort 슬라이스에서 구현·문서화 완료
 
 ## 1. 추가 범위
@@ -26,4 +26,4 @@
 ## 3. 테스트
 
 - `EnrollmentApiTest`: 역할×엔드포인트 상태코드 16개 추가
-- `ApiTestSupport.enrollStudent`: 리포지토리 직접 저장 → **이 API 호출로 교체** (cohort/design.md 6절 예정 항목)
+- `ApiTestSupport.enrollStudent`: 리포지토리 직접 저장 → **이 API 호출로 교체** (guide/design.md 6절 예정 항목)

@@ -131,7 +131,7 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 
 ## 5. 관련 문서
 
-- [cohort/design.md](../cohort/design.md) - Cohort 슬라이스 결정 기록 (구현 완료 부분의 원본)
-- [cohort/cohort guide.md](../cohort/cohort%20guide.md) - 코드 안내서
+- [guide/design.md](../guide/design.md) - Cohort 슬라이스 결정 기록 (구현 완료 부분의 원본)
+- [guide/1st guide.md](../guide/1st%20guide.md) - 코드 안내서
 - [permissions.md](../permissions.md) - 권한 판정 4단계
 - [mvp-scope.md](../mvp-scope.md) - P1 기능 목록 (이 문서의 결정 3이 4절·5절·6절에 반영됨)
