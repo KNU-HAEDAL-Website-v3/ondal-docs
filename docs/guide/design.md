@@ -1,6 +1,6 @@
 # Cohort(분반) 수직 슬라이스 설계
 
-> 상태: 확정 (2026-08-17) · 구현 완료 (BE `feat/cohort-slice`, 2026-08-17 - 구현 리뷰 반영분으로 1절·2절·3절·6절·7절 갱신) · 구현 레포: [haedal-online-judge-BE](https://github.com/KNU-HAEDAL-Website-v3/haedal-online-judge-BE)
+> 상태: 확정 (2026-08-17) · 구현 완료 (BE `feat/cohort-slice`, 2026-08-17 - 구현 리뷰 반영분으로 1절·2절·3절·6절·7절 갱신) · 구현 레포: [ondal-BE](https://github.com/KNU-HAEDAL-Website-v3/ondal-BE)
 > 기준 문서: [mvp-scope.md](../mvp-scope.md) · [permissions.md](../permissions.md) · [flows-and-usecases.md](../flows-and-usecases.md) · [decisions/3](../decisions/3-권한-모델-2층-구조.md) · [decisions/5](../decisions/5-세션-인증-채택-spring-security-보류.md) · BE `CLAUDE.md`
 > 검증 기준 버전: Spring Boot 4.1.0 / Spring Framework 7.0 / springdoc 3.1.0 / Testcontainers 2.0.5
 
@@ -117,7 +117,7 @@ boolean canManage(User user, Cohort cohort, EnrollmentRole myRoleOrNull) // 응�
 - (b) `@CohortRole`인데 경로 패턴에 `{cohortId}` 없음 → 실패
 - (c) 경로에 `{cohortId}`가 있는데 유효 어노테이션이 `@CohortRole`도 `@AdminOnly`도 아님 → 실패
 - (d) 한 위치(메서드 또는 클래스)에 3종 중 둘 이상 → 실패
-- (e) 우리 패키지(`kr.haedal.hoj`)의 컨트롤러가 `/api/` 밖에 매핑 → 실패 (prefix 오타로 인터셉터 2개를 통째로 비껴가는 것을 방지)
+- (e) 우리 패키지(`kr.haedal.ondal`)의 컨트롤러가 `/api/` 밖에 매핑 → 실패 (prefix 오타로 인터셉터 2개를 통째로 비껴가는 것을 방지)
 
 위반 처리: 위반 목록을 모아 `IllegalStateException` → 부팅 중단. "어노테이션 붙이는 걸 잊는" 실수를 컴파일 다음 단계에서 차단.
 
@@ -219,12 +219,12 @@ boolean canManage(User user, Cohort cohort, EnrollmentRole myRoleOrNull) // 응�
 
 - 의존성 (버전 생략 - Boot 4.1 BOM이 관리): `spring-boot-testcontainers`, `org.testcontainers:testcontainers-postgresql` (**Testcontainers 2.x** - 패키지 `org.testcontainers.postgresql.PostgreSQLContainer`, 1.x의 `containers.*`는 deprecated). `testcontainers-junit-jupiter`는 불필요(@Bean 방식)
 - `application.yml` 정리: jpa/jackson/session/logging은 프로필 없는 공통 문서로, `local`에는 datasource만. 테스트는 `@ActiveProfiles("test")`(→ LocalDataSeeder 미실행), datasource는 `@ServiceConnection`이 채움. `application-test.yml` 불필요
-- `src/test/java/kr/haedal/hoj/support/` - 한 번만 만드는 파일(PM 담당, 주니어는 수정 안 함):
+- `src/test/java/kr/haedal/ondal/support/` - 한 번만 만드는 파일(PM 담당, 주니어는 수정 안 함):
   - `PostgresContainerConfig` - `@TestConfiguration(proxyBeanMethods=false)` + `@Bean @ServiceConnection PostgreSQLContainer("postgres:16")`
   - `ApiTestSupport` - 추상 베이스: `@SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test") @Import(PostgresContainerConfig.class)`, `MockMvc`, `ObjectMapper`(Jackson 3 `tools.jackson`), `LoginHelper`, 리포지토리, `@AfterEach` `DatabaseCleaner.clean()`, 그리고 여러 슬라이스가 공용으로 쓰는 픽스처 `createCohort(name, operators...)`, `enrollStudent(cohortId, loginId)`(수강생 API 나오면 API 호출로 교체), `archiveCohort`, `restoreCohort`, JSON 유틸. **슬라이스 고유 픽스처(createAssignment 등)는 그 슬라이스 테스트 클래스의 private 헬퍼로** - support/는 PM 파일
   - `DatabaseCleaner` - `TRUNCATE ... RESTART IDENTITY CASCADE`. 테스트 `@Transactional` 롤백은 미채택(요청이 테스트 트랜잭션 안에서 돌아 open-in-view=false가 드러내야 할 LAZY 문제를 가림)
   - `LoginHelper` - `MockHttpSession as(User)` : `session.setAttribute(SessionConst.LOGIN_USER_ID, user.getId())` 직접 세팅 (실제 로그인 API 호출 없음 - 인증 교체와 무관). `admin()`, `member(loginId)`는 User 저장 후 세션 반환. 로그인 API 자체(세션 고정 방지 등)는 `AuthApiTest` 1개로 분리
-- `HojApplicationTests` 삭제 (남기면 DB 없이 `./gradlew build`가 깨짐)
+- `OndalApplicationTests` 삭제 (남기면 DB 없이 `./gradlew build`가 깨짐)
 - MockMvc(`@AutoConfigureMockMvc`, 패키지 `org.springframework.boot.webmvc.test.autoconfigure`) 채택. RestTestClient/MockMvcTester는 이 슬라이스에서 미사용
 - 테스트 파일은 컨트롤러와 1:1: `cohort/CohortApiTest`(#2~#7), `enrollment/EnrollmentApiTest`(#1, #8~#10), `auth/AuthApiTest`, `auth/authorization/AuthorizationMappingValidatorTest`(가짜 매핑으로 규칙 a~e + 위치 우선 해석 + 위반 시 기동 중단을 단위 테스트; 실제 컨텍스트 위반은 모든 API 테스트가 기동 실패로 알림)
 - 케이스 (역할 × 엔드포인트 대표):
@@ -241,7 +241,7 @@ boolean canManage(User user, Cohort cohort, EnrollmentRole myRoleOrNull) // 응�
 ## 7. 파일 목록
 
 ```
-src/main/java/kr/haedal/hoj/
+src/main/java/kr/haedal/ondal/
 ├─ cohort/      Cohort, CohortStatus, CohortRepository, CohortService, CohortController, CohortResponseAssembler
 │               dto/ CohortCreateRequest, CohortUpdateRequest, CohortResponse
 ├─ enrollment/  Enrollment, EnrollmentRole, EnrollmentRepository, EnrollmentService, EnrollmentController
@@ -252,7 +252,7 @@ src/main/java/kr/haedal/hoj/
 ├─ common/error/  NotFoundException, ConflictException, CohortArchivedException, InvalidInputException (+ GlobalExceptionHandler: 위 4개 + 타입 불일치·깨진 JSON·405·미매핑 경로 핸들러)
 ├─ common/config/ WebConfig(인터셉터 등록·AuthPaths 사용), LocalDataSeeder(샘플 분반)
 src/main/resources/application.yml (공통/local 분리, 세션 쿠키 SameSite=Lax·HttpOnly)
-src/test/java/kr/haedal/hoj/
+src/test/java/kr/haedal/ondal/
 ├─ support/     PostgresContainerConfig, ApiTestSupport, DatabaseCleaner, LoginHelper
 ├─ cohort/CohortApiTest, enrollment/EnrollmentApiTest, auth/AuthApiTest, auth/authorization/AuthorizationMappingValidatorTest
 build.gradle: springdoc 3.1.0, spring-boot-testcontainers, testcontainers-postgresql

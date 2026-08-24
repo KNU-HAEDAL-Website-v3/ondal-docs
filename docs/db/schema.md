@@ -1,4 +1,4 @@
-# HOJ P1 DB 스키마 (확정)
+# Ondal P1 DB 스키마 (확정)
 
 > 확정일: 2026-08-19 (PM 결정) · 기준 코드: BE `main` `d037cc4` (users·cohorts·enrollments 구현 완료, assignments·submissions는 이 문서가 설계 원본)
 > P1 스키마의 단일 출처 - 변경 시 이 문서에 결정 기록 + 코드·ERD(ERDCloud) 동시 갱신
@@ -24,7 +24,7 @@
 
 ```sql
 -- =========================================================================
--- HOJ P1 DB 스키마 - 확정본 2026-08-19 (docs/db/schema.md)
+-- Ondal P1 DB 스키마 - 확정본 2026-08-19 (docs/db/schema.md)
 -- ERDCloud 가져오기용 MySQL 문법. 실제 DB는 PostgreSQL 16.
 -- =========================================================================
 
@@ -36,7 +36,7 @@ CREATE TABLE users (
     created_at  DATETIME(6) NOT NULL COMMENT '생성 시각(UTC) - KST 변환은 프론트 몫',
     PRIMARY KEY (id),
     UNIQUE KEY uk_users_login_id (login_id)
-) COMMENT='사용자 - 신원의 원본은 홈페이지, HOJ는 login_id로 매칭하는 로컬 사본. 하드 삭제 없음. 분반 삭제에도 지워지지 않는다';
+) COMMENT='사용자 - 신원의 원본은 홈페이지, Ondal은 login_id로 매칭하는 로컬 사본. 하드 삭제 없음. 분반 삭제에도 지워지지 않는다';
 
 CREATE TABLE cohorts (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'PK',
@@ -132,6 +132,6 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 ## 5. 관련 문서
 
 - [guide/design.md](../guide/design.md) - Cohort 슬라이스 결정 기록 (구현 완료 부분의 원본)
-- [guide/1st guide.md](../guide/1st%20guide.md) - 코드 안내서
+- [guide/1st guide(First to Cohort).md](../guide/1st%20guide%28First%20to%20Cohort%29.md) - 코드 안내서
 - [permissions.md](../permissions.md) - 권한 판정 4단계
 - [mvp-scope.md](../mvp-scope.md) - P1 기능 목록 (이 문서의 결정 3이 4절·5절·6절에 반영됨)

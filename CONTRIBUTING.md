@@ -1,12 +1,12 @@
 # 기여 가이드 (Contributing)
 
-- HOJ 기여 방법 안내 문서
+- Ondal 기여 방법 안내 문서
 - 코드 외 기여도 전부 기여로 인정: 문제 출제, 문서, 디자인, QA
 
 ## 프로젝트 구조
 
 ```
-haedal-online-judge/
+ondal/
 ├─ backend/          # Spring Boot API 서버
 ├─ frontend/         # 웹 프론트엔드 (조직 컨벤션 스택)
 ├─ docs/

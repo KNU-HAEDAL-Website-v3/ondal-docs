@@ -1,6 +1,6 @@
 # 1st guide - 스프링 기초부터 첫 도메인(Cohort)까지
 
-> 대상: HOJ 백엔드 코드를 처음 읽는 사람 - Spring·JPA 사전 지식 불필요. 기술 면접에서 "왜 이렇게 짰나"까지 답할 수 있는 깊이를 목표로 함
+> 대상: Ondal 백엔드 코드를 처음 읽는 사람 - Spring·JPA 사전 지식 불필요. 기술 면접에서 "왜 이렇게 짰나"까지 답할 수 있는 깊이를 목표로 함
 > 구성: **1부(1~9장) 기초** - 웹·서블릿·스프링·JPA·세션·테스트의 바닥 / **2부(10~22장) Cohort 슬라이스** - 그 바닥 위에서 `cohort`·`enrollment` 코드가 실제로 움직이는 방식
 > 짝 문서: [design.md](design.md) = "왜 이렇게 정했나"(결정 기록) / 이 문서 = "기초 + 코드가 어떻게 움직이나"(안내서) / 수강생 배정 결정: [enrollment/design.md](../enrollment/design.md)
 > 기준 코드: BE `main` `2e8e774` (분반 PR #2 · 패키지 세분화 PR #3 · 수강생 배정 PR #5 · 문서 윤문 PR #7 머지, 2026-08-22). 테스트 69개
@@ -45,8 +45,8 @@
 
 ### 1.1 클라이언트와 서버
 
-- 클라이언트: 요청을 보내는 쪽 - HOJ에서는 브라우저에서 도는 프런트엔드(React, 로컬 `localhost:5173`, 배포 Cloudflare Pages)
-- 서버: 요청을 받아 처리하고 응답을 돌려주는 쪽 - HOJ 백엔드(Spring Boot, 로컬 `localhost:8080`)
+- 클라이언트: 요청을 보내는 쪽 - Ondal에서는 브라우저에서 도는 프런트엔드(React, 로컬 `localhost:5173`, 배포 Cloudflare Pages)
+- 서버: 요청을 받아 처리하고 응답을 돌려주는 쪽 - Ondal 백엔드(Spring Boot, 로컬 `localhost:8080`)
 - 백엔드의 일 = **요청을 받아 → 규칙을 적용하고 → DB를 읽고 쓰고 → 응답을 만든다**. 이 문서 전체가 이 네 단계의 세부
 - 둘 사이의 약속(계약) = HTTP 위의 API. 계약의 기준 문서는 서버가 자동 생성하는 Swagger UI(16장)
 
@@ -82,28 +82,28 @@ Cookie: JSESSIONID=3F2A...
 
 - 용어
   - 헤더: 메타데이터. `Content-Type`(본문 형식), `Cookie`/`Set-Cookie`(쿠키), `Location`(생성된 자원 위치), `Origin`(요청 출처)
-  - 본문(body): 실제 데이터. HOJ는 요청·응답 모두 JSON
+  - 본문(body): 실제 데이터. Ondal은 요청·응답 모두 JSON
   - 쿼리 파라미터: 경로 뒤 `?key=value` - 필터·옵션용. 예: `GET /api/cohorts?status=ARCHIVED`
   - 경로 변수: 경로 안의 식별자. 예: `/api/cohorts/3`의 `3`
 
 ### 1.3 HTTP 메서드의 의미와 멱등성
 
-| 메서드 | 의미 | 안전(읽기만) | 멱등 | HOJ에서의 쓰임 |
+| 메서드 | 의미 | 안전(읽기만) | 멱등 | Ondal에서의 쓰임 |
 |---|---|---|---|---|
 | GET | 조회 | O | O | 목록·상세·명부·내 정보 |
-| POST | 생성 또는 "행위" | X | X (원칙) | 분반 생성, 로그인/로그아웃, 수강생 일괄 배정, `archive`/`restore` 같은 상태 전이(HOJ는 멱등으로 설계) |
+| POST | 생성 또는 "행위" | X | X (원칙) | 분반 생성, 로그인/로그아웃, 수강생 일괄 배정, `archive`/`restore` 같은 상태 전이(Ondal은 멱등으로 설계) |
 | PUT | 전체 교체 | X | O | 분반 수정(이름·설명 전부 보냄), 운영진 지정 |
-| PATCH | 부분 수정 | X | 경우에 따라 | HOJ 미사용 |
+| PATCH | 부분 수정 | X | 경우에 따라 | Ondal 미사용 |
 | DELETE | 삭제 | X | O | 운영진 해제, 수강생 제외 |
 | OPTIONS | 서버가 허용하는 것 질의 | O | O | 브라우저의 CORS 사전 요청(1.7절) |
 
 - **멱등(idempotent)**: 같은 요청을 여러 번 보내도 결과(서버 상태)가 한 번 보낸 것과 같음
   - 예: `POST /api/cohorts/3/archive`를 두 번 눌러도 상태는 ARCHIVED 한 번 - 네트워크 재시도에 안전
-  - HOJ 규약(design.md 4절): 상태 전이 = `POST /{id}/{동사}` 멱등, 수정 = PUT 전체 교체, 삭제 = DELETE 204(대상 없으면 404)
+  - Ondal 규약(design.md 4절): 상태 전이 = `POST /{id}/{동사}` 멱등, 수정 = PUT 전체 교체, 삭제 = DELETE 204(대상 없으면 404)
 
 ### 1.4 상태코드 - 숫자 한 자리가 뜻하는 것
 
-| 코드 | 뜻 | HOJ의 에러 코드(`code`) | 언제 |
+| 코드 | 뜻 | Ondal의 에러 코드(`code`) | 언제 |
 |---|---|---|---|
 | 200 OK | 성공 | - | 조회·수정·멱등 전이 |
 | 201 Created | 생성됨 | - | `POST /api/cohorts` (+ `Location` 헤더) |
@@ -117,7 +117,7 @@ Cookie: JSESSIONID=3F2A...
 | 500 Internal Server Error | 서버 버그 | `INTERNAL_ERROR` | 처리되지 않은 예외(원인은 로그에만) |
 
 - 1xx 정보 / 2xx 성공 / 3xx 리다이렉트 / 4xx 클라이언트 잘못 / 5xx 서버 잘못
-- 401 vs 403 vs 404의 구분 = 7.1절. HOJ 프런트 규칙: **403만 홈으로**, 401은 로그인으로, 404는 안내 페이지
+- 401 vs 403 vs 404의 구분 = 7.1절. Ondal 프런트 규칙: **403만 홈으로**, 401은 로그인으로, 404는 안내 페이지
 
 ### 1.5 REST와 자원 URL
 
@@ -127,13 +127,13 @@ Cookie: JSESSIONID=3F2A...
   - 계층(소유)은 경로 중첩으로: 분반 3의 수강생 `s1` → `/api/cohorts/3/students/s1`
   - 필터·옵션은 쿼리로: `?status=ARCHIVED`
   - 동사는 피하되, 상태 전이처럼 자원 모델로 표현이 어색하면 `POST /{id}/{동사}` 허용(`archive`, `restore`)
-- HOJ의 추가 규칙: 분반에 속한 자원은 **반드시** `/api/cohorts/{cohortId}/...` 아래 - 권한 판정이 이 경로 변수를 읽기 때문(13장)
+- Ondal의 추가 규칙: 분반에 속한 자원은 **반드시** `/api/cohorts/{cohortId}/...` 아래 - 권한 판정이 이 경로 변수를 읽기 때문(13장)
 
 ### 1.6 무상태(stateless)와 "로그인 상태"
 
 - HTTP는 무상태: 요청 하나하나가 독립적. 서버는 이전 요청을 기억하지 않음
 - 그런데 "로그인한 사용자"는 기억해야 함 → 두 가지 방법
-  - **세션**: 서버가 사용자별 기억 공간(세션)을 만들고, 그 열쇠(세션 id)를 쿠키로 브라우저에 줌. 이후 요청마다 쿠키가 실려 옴 → HOJ 채택
+  - **세션**: 서버가 사용자별 기억 공간(세션)을 만들고, 그 열쇠(세션 id)를 쿠키로 브라우저에 줌. 이후 요청마다 쿠키가 실려 옴 → Ondal 채택
   - **토큰(JWT 등)**: 서버가 서명한 증표를 주고, 브라우저가 헤더에 실어 보냄. 서버는 기억 없이 서명만 검증
 - 세부 비교와 선택 이유: 7.2~7.3절
 
@@ -150,7 +150,7 @@ Cookie: JSESSIONID=3F2A...
 - 출처 = **스킴 + 호스트 + 포트**. `http://localhost:5173`과 `http://localhost:8080`은 **다른 출처**
 - 브라우저의 기본 규칙(동일 출처 정책): 다른 출처의 응답을 스크립트가 읽지 못하게 차단
 - 서버가 "이 출처는 허용"이라고 응답 헤더로 알려 주는 절차 = **CORS**. 일부 요청은 본 요청 전에 브라우저가 `OPTIONS`로 먼저 물어봄 = **사전 요청(preflight)**
-- HOJ의 CORS 설정과 원리: 5.6절·7.6절. 인터셉터가 사전 요청을 통과시키는 코드가 있는 이유도 거기에
+- Ondal의 CORS 설정과 원리: 5.6절·7.6절. 인터셉터가 사전 요청을 통과시키는 코드가 있는 이유도 거기에
 
 ---
 
@@ -181,9 +181,9 @@ Cookie: JSESSIONID=3F2A...
 | 위치 | DispatcherServlet **앞** | DispatcherServlet **안**, 컨트롤러 직전·직후 |
 | 아는 것 | 요청·응답만 | + 어떤 컨트롤러 메서드가 처리할지(`HandlerMethod`) |
 | 예외 처리 | `@RestControllerAdvice`에 닿지 않음 | 닿음 → 같은 `{code, message}` 응답 |
-| HOJ | 직접 작성 없음(Boot 기본만) | `AuthInterceptor`, `AuthorizationInterceptor` |
+| Ondal | 직접 작성 없음(Boot 기본만) | `AuthInterceptor`, `AuthorizationInterceptor` |
 
-- HOJ가 인터셉터를 고른 이유: 권한 판정에 "이 핸들러에 어떤 어노테이션이 붙었나"가 필요 → 핸들러를 아는 층이어야 함. 예외도 한 곳(17장)으로 모임
+- Ondal이 인터셉터를 고른 이유: 권한 판정에 "이 핸들러에 어떤 어노테이션이 붙었나"가 필요 → 핸들러를 아는 층이어야 함. 예외도 한 곳(17장)으로 모임
 
 ### 2.4 DispatcherServlet - 요청이 컨트롤러에 닿기까지
 
@@ -199,7 +199,7 @@ Tomcat ─ Filter 체인 ─▶ DispatcherServlet.doDispatch(request, response)
   │         CORS 요청이면 CorsInterceptor가 체인 맨 앞에 붙고, 사전 요청이면 handler가 PreFlightHandler로 바뀜
   │
   ├─ (2) interceptors[i].preHandle() 등록 순서대로
-  │       HOJ: AuthInterceptor(로그인?) → AuthorizationInterceptor(권한?)
+  │       Ondal: AuthInterceptor(로그인?) → AuthorizationInterceptor(권한?)
   │       false 반환 또는 예외 → 컨트롤러 미실행
   │
   ├─ (3) HandlerAdapter.handle()
@@ -222,7 +222,7 @@ Tomcat ─ Filter 체인 ─▶ DispatcherServlet.doDispatch(request, response)
 
 - Model(데이터)·View(화면)·Controller(요청 처리)의 분리 패턴
 - 서버가 HTML을 그리던 시절: 컨트롤러가 View 이름을 반환 → 템플릿 렌더링
-- REST API 서버(HOJ): View가 없음. 컨트롤러 반환값을 **메시지 컨버터가 JSON으로 직렬화**해 본문에 기록 - `@RestController`가 그 선언(5.1절)
+- REST API 서버(Ondal): View가 없음. 컨트롤러 반환값을 **메시지 컨버터가 JSON으로 직렬화**해 본문에 기록 - `@RestController`가 그 선언(5.1절)
 
 ---
 
@@ -232,7 +232,7 @@ Tomcat ─ Filter 체인 ─▶ DispatcherServlet.doDispatch(request, response)
 
 - 스프링 프레임워크: 자바 객체(POJO)들을 **컨테이너가 생성·연결·관리**하게 해 주는 프레임워크. 핵심 = IoC 컨테이너(`ApplicationContext`)
 - 스프링 부트: 그 위에 **자동 설정 + 내장 서버 + 스타터 의존성**을 얹어 설정 없이 바로 뜨게 한 층. 스프링 없는 부트는 없음
-- HOJ 채택 근거: [decisions/1](../decisions/1-백엔드-spring-채택.md)
+- Ondal 채택 근거: [decisions/1](../decisions/1-백엔드-spring-채택.md)
 
 ### 3.2 IoC(제어의 역전)와 DI(의존성 주입)
 
@@ -240,7 +240,7 @@ Tomcat ─ Filter 체인 ─▶ DispatcherServlet.doDispatch(request, response)
   - 예: `CohortController`는 `new CohortService(...)`를 하지 않음. 컨테이너가 `CohortService` 빈을 만들어 생성자에 넣어 줌
 - DI: IoC를 실현하는 방법 - 의존 객체를 밖에서 넣어 줌
 - 주입 방식 3가지: 생성자 주입 / 세터 주입 / 필드 주입(`@Autowired` 필드)
-- HOJ 메인 코드는 **전부 생성자 주입**. 생성자가 하나면 `@Autowired` 생략 가능(Spring 4.3+) → 메인 코드에 `@Autowired`가 한 곳도 없음
+- Ondal 메인 코드는 **전부 생성자 주입**. 생성자가 하나면 `@Autowired` 생략 가능(Spring 4.3+) → 메인 코드에 `@Autowired`가 한 곳도 없음
 
 ```java
 // CohortService.java - 생성자 하나 = 이 클래스가 의존하는 것 전부
@@ -262,11 +262,11 @@ public CohortService(CohortRepository cohortRepository,
 
 - 빈 = 컨테이너가 생성·관리하는 객체
 - 등록 방법
-  1. **컴포넌트 스캔**: `@Component` 계열이 붙은 클래스를 찾아 자동 등록 - HOJ 메인 코드 전부
-  2. **`@Bean` 메서드**: `@Configuration` 클래스 안에서 메서드가 반환한 객체를 등록 - 내가 어노테이션을 못 붙이는 외부 클래스용. HOJ에서는 테스트의 `PostgresContainerConfig`(`PostgreSQLContainer` 빈) 하나
+  1. **컴포넌트 스캔**: `@Component` 계열이 붙은 클래스를 찾아 자동 등록 - Ondal 메인 코드 전부
+  2. **`@Bean` 메서드**: `@Configuration` 클래스 안에서 메서드가 반환한 객체를 등록 - 내가 어노테이션을 못 붙이는 외부 클래스용. Ondal에서는 테스트의 `PostgresContainerConfig`(`PostgreSQLContainer` 빈) 하나
 - 스테레오타입 어노테이션 = "이 클래스는 빈이며 역할은 X"라는 이름표
 
-| 어노테이션 | 의미 | HOJ에서 |
+| 어노테이션 | 의미 | Ondal에서 |
 |---|---|---|
 | `@Component` | 범용 빈 | 인터셉터 2개, `LoginUserArgumentResolver`, `CohortAuthorizer`, `CohortResponseAssembler`, `AuthorizationMappingValidator`, `LocalDataSeeder`, 테스트 `DatabaseCleaner`·`LoginHelper` |
 | `@Service` | 비즈니스 계층 표시 - 기능 차이 없음 | `UserService`, `CohortService`, `EnrollmentService`, `StubAuthService` |
@@ -281,15 +281,15 @@ public CohortService(CohortRepository cohortRepository,
 
 - 기본 스코프 = **싱글톤**: 컨테이너당 인스턴스 하나. 모든 요청(스레드)이 공유(2.2절)
 - 따라서 빈의 필드에는 **의존성만**. 요청별 데이터(세션, 사용자)는 필드에 저장하지 않고 메서드 인자·`request`에서 매번 꺼냄 - `AuthInterceptor`가 그렇게 생긴 이유
-- 다른 스코프(prototype, request, session)도 있으나 HOJ는 전부 싱글톤
+- 다른 스코프(prototype, request, session)도 있으나 Ondal은 전부 싱글톤
 
 ### 3.6 `@SpringBootApplication`과 기동 순서
 
 ```java
 @SpringBootApplication
-public class HojApplication {
+public class OndalApplication {
     public static void main(String[] args) {
-        SpringApplication.run(HojApplication.class, args);
+        SpringApplication.run(OndalApplication.class, args);
     }
 }
 ```
@@ -297,8 +297,8 @@ public class HojApplication {
 - `@SpringBootApplication` = 세 어노테이션의 합성
   - `@SpringBootConfiguration`(= `@Configuration`): 이 클래스가 설정 클래스
   - `@EnableAutoConfiguration`: 자동 설정 켜기(3.7절)
-  - `@ComponentScan`: **이 클래스가 있는 패키지(`kr.haedal.hoj`)와 하위**를 스캔
-- → 모든 코드가 `kr.haedal.hoj.*` 아래에 있는 이유. 다른 패키지에 `@Service`를 만들면 스캔 대상이 아님(빈이 안 됨)
+  - `@ComponentScan`: **이 클래스가 있는 패키지(`kr.haedal.ondal`)와 하위**를 스캔
+- → 모든 코드가 `kr.haedal.ondal.*` 아래에 있는 이유. 다른 패키지에 `@Service`를 만들면 스캔 대상이 아님(빈이 안 됨)
 - `SpringApplication.run`의 순서
   1. 환경(Environment) 준비 - `application.yml` 읽기, 프로필 결정
   2. `ApplicationContext` 생성
@@ -312,14 +312,14 @@ public class HojApplication {
 - 클래스패스를 보고 "있으면 켜는" 조건부 설정
   - `@ConditionalOnClass`: 예) Hibernate가 있으면 JPA 설정 로드
   - `@ConditionalOnMissingBean`: 내가 같은 타입 빈을 만들면 자동 설정은 **물러남**
-- HOJ가 한 줄도 안 썼는데 생긴 빈: `DataSource`(HikariCP), `EntityManagerFactory`, `JpaTransactionManager`, `DispatcherServlet`, Jackson `ObjectMapper`, `RequestMappingHandlerMapping`, 테스트의 `MockMvc`
+- Ondal이 한 줄도 안 썼는데 생긴 빈: `DataSource`(HikariCP), `EntityManagerFactory`, `JpaTransactionManager`, `DispatcherServlet`, Jackson `ObjectMapper`, `RequestMappingHandlerMapping`, 테스트의 `MockMvc`
 - `WebConfig implements WebMvcConfigurer` = 자동 설정을 **끄지 않고 덧붙이는** 공식 확장점. `@EnableWebMvc`를 붙이면 Boot의 MVC 자동 설정이 통째로 꺼지므로 쓰지 않음(5.6절)
 
-### 3.8 빈 생명주기와 HOJ가 쓰는 훅
+### 3.8 빈 생명주기와 Ondal이 쓰는 훅
 
 - 기동 중 순서
   1. 생성자 호출(= 의존성 주입)
-  2. `@PostConstruct` / `InitializingBean` - HOJ 미사용
+  2. `@PostConstruct` / `InitializingBean` - Ondal 미사용
   3. **모든 싱글톤 생성 완료** → `SmartInitializingSingleton.afterSingletonsInstantiated()` → `AuthorizationMappingValidator`
      - 이 시점인 이유: 컨트롤러 빈이 **전부** 만들어져 `RequestMappingHandlerMapping`에 매핑이 다 등록된 뒤라야 "모든 핸들러"를 검사 가능. 생성자·`@PostConstruct`는 너무 이름
      - 여기서 예외 → 컨텍스트 초기화 실패 → **부팅 실패**. "권한 어노테이션 누락 = 배포 불가"의 구현
@@ -336,11 +336,11 @@ public class HojApplication {
 
 ### 3.10 외부 설정 주입 - `@Value`, 설정 우선순위, `@Qualifier`
 
-- `@Value("${hoj.cors.allowed-origins:http://localhost:5173}") String[] allowedOrigins` (`WebConfig`)
+- `@Value("${ondal.cors.allowed-origins:http://localhost:5173}") String[] allowedOrigins` (`WebConfig`)
   - `${키:기본값}` - 키가 없으면 콜론 뒤 값
   - `"a,b,c"` 콤마 문자열 → `String[]` 자동 변환
 - 설정 출처 우선순위(높음 → 낮음): 커맨드라인 인자 > OS 환경변수 > `application-{profile}.yml` > `application.yml` 프로필 문서 > 공통 문서
-  - 운영에서 `HOJ_CORS_ALLOWED_ORIGINS=https://...pages.dev` 환경변수로 덮으면 됨(대소문자·하이픈에 관대한 relaxed binding)
+  - 운영에서 `ONDAL_CORS_ALLOWED_ORIGINS=https://...pages.dev` 환경변수로 덮으면 됨(대소문자·하이픈에 관대한 relaxed binding)
 - `@Qualifier("requestMappingHandlerMapping")` (`AuthorizationMappingValidator`)
   - 같은 타입 빈이 여럿일 때 **이름으로** 고름. springdoc·actuator 같은 라이브러리가 `HandlerMapping` 빈을 추가할 수 있어 "우리 컨트롤러 매핑" 빈을 못 박은 것
   - 면접: 같은 타입 빈이 둘이면? → `NoUniqueBeanDefinitionException`으로 기동 실패. 해결 = `@Qualifier`, `@Primary`, 파라미터 이름 일치, `@Profile`로 하나만 등록
@@ -354,7 +354,7 @@ public class HojApplication {
 ### 3.12 순환 의존
 
 - A → B → A 생성자 주입은 **기동 실패**(Boot 2.6+ 기본 금지)
-- HOJ에서 실제로 마주친 지점: `CohortService`가 `EnrollmentService`를 쓰고, `EnrollmentService`도 분반 응답(`CohortResponse`)을 만들어야 함 → 서로 주입하면 순환
+- Ondal에서 실제로 마주친 지점: `CohortService`가 `EnrollmentService`를 쓰고, `EnrollmentService`도 분반 응답(`CohortResponse`)을 만들어야 함 → 서로 주입하면 순환
 - 해결: 응답 조립을 `CohortResponseAssembler`로 **빼서** 둘 다 그것을 주입. 의존 그래프가 `CohortService → EnrollmentService → Assembler`, `CohortService → Assembler`의 DAG가 됨
 - 면접 답: 순환은 `@Lazy`로 덮지 말고 **책임을 분리해 제3 컴포넌트로 추출**하는 것이 정석
 
@@ -365,7 +365,7 @@ public class HojApplication {
   - 프록시의 메서드 = "트랜잭션 시작 → 원본 메서드 호출 → 커밋/롤백"
 - 이것이 AOP(관점 지향 프로그래밍)의 스프링식 구현. 공통 관심사(트랜잭션·로깅)를 원본 코드 수정 없이 둘러쌈
 - 함정(6.5절에서 다시): 프록시를 거쳐야 동작하므로 **같은 클래스 안에서 자기 메서드를 호출하면 적용되지 않음**, `private` 메서드에도 적용되지 않음
-- HOJ에서 프록시인 것: `@Transactional` 서비스 3개, Spring Data 리포지토리(인터페이스의 구현체 자체가 프록시), `@PersistenceContext`의 `EntityManager`
+- Ondal에서 프록시인 것: `@Transactional` 서비스 3개, Spring Data 리포지토리(인터페이스의 구현체 자체가 프록시), `@PersistenceContext`의 `EntityManager`
 
 ---
 
@@ -386,7 +386,7 @@ java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 - `org.springframework.boot`: `bootRun`(실행), `bootJar`(실행 가능 fat jar), `developmentOnly` 구성 제공
 - `io.spring.dependency-management`: **Boot BOM**(호환 버전 표)을 적용 → 아래 의존성에 버전을 안 적어도 됨
 - 면접: 스타터에 버전이 없는 이유 → Boot 버전(4.1.0)이 정하는 BOM이 Spring Framework·Hibernate·Jackson·Tomcat 등 수백 개의 **서로 호환되는 버전 조합**을 관리. 반대로 `springdoc`은 BOM 밖이라 `3.1.0`을 직접 명시(주석에 이유 기재)
-- 툴체인 21: Gradle이 JDK 21로 컴파일·실행(없으면 내려받음). HOJ 코드가 쓰는 Java 17~21 기능: `record`(DTO 전부), `instanceof` 패턴 매칭(`handler instanceof HandlerMethod handlerMethod`), `Stream.toList()`, `List.of`/`Map.of`, `var`(테스트)
+- 툴체인 21: Gradle이 JDK 21로 컴파일·실행(없으면 내려받음). Ondal 코드가 쓰는 Java 17~21 기능: `record`(DTO 전부), `instanceof` 패턴 매칭(`handler instanceof HandlerMethod handlerMethod`), `Stream.toList()`, `List.of`/`Map.of`, `var`(테스트)
 
 ### 4.2 의존성 구성(configuration)
 
@@ -432,7 +432,7 @@ tasks.named('test') { useJUnitPlatform() }
 
 ### 4.4 `settings.gradle`
 
-- `rootProject.name = 'hoj'` → 산출물 `hoj-0.0.1-SNAPSHOT.jar`. 단일 모듈 프로젝트
+- `rootProject.name = 'ondal'` → 산출물 `ondal-0.0.1-SNAPSHOT.jar`. 단일 모듈 프로젝트
 
 ### 4.5 `application.yml` 한 줄씩
 
@@ -506,9 +506,9 @@ spring:
     activate:
       on-profile: local
   datasource:
-    url: jdbc:postgresql://localhost:5432/hoj
-    username: hoj
-    password: hoj-local-password
+    url: jdbc:postgresql://localhost:5432/ondal
+    username: ondal
+    password: ondal-local-password
 ```
 - local 전용 데이터소스. docker-compose 값과 1:1
 - **test 프로필은 datasource 설정 자체가 없음** - Testcontainers `@ServiceConnection`이 컨테이너를 띄운 뒤 url/username/password를 런타임에 주입(8.5절)
@@ -518,11 +518,11 @@ spring:
 
 - `postgres:16` 컨테이너 1개. `POSTGRES_DB/USER/PASSWORD` 환경변수로 최초 기동 시 DB·계정 생성
 - `5432:5432` 포트 포워딩 → `localhost:5432`로 접속. 로컬에 다른 PostgreSQL이 떠 있으면 충돌(README 트러블슈팅)
-- named volume `hoj-db-data` → `docker compose down` 후에도 데이터 유지. 초기화는 `down -v`
+- named volume `ondal-db-data` → `docker compose down` 후에도 데이터 유지. 초기화는 `down -v`
 
-### 4.7 `HojApplication` - main 하나로 웹서버가 뜨는 이유와 실행 순서
+### 4.7 `OndalApplication` - main 하나로 웹서버가 뜨는 이유와 실행 순서
 
-- 전통 방식: WAR를 빌드해 외부 Tomcat에 배포. Boot: **Tomcat을 라이브러리로 jar 안에 넣고** `main`에서 기동 → `java -jar hoj.jar`. 컨테이너·클라우드 배포에 맞는 모델
+- 전통 방식: WAR를 빌드해 외부 Tomcat에 배포. Boot: **Tomcat을 라이브러리로 jar 안에 넣고** `main`에서 기동 → `java -jar ondal.jar`. 컨테이너·클라우드 배포에 맞는 모델
 - README 실행 순서 = 의존 순서: `docker compose up -d`(DB) → `./gradlew bootRun`(local 프로필 → 시더 → 8080) → Swagger UI
 - curl 흐름 `-c`(응답의 Set-Cookie 저장) → `-b`(요청에 쿠키 실어 보냄) = 브라우저의 세션 쿠키 동작을 손으로 흉내 낸 것
 
@@ -532,7 +532,7 @@ spring:
 
 ### 5.1 컨트롤러 어노테이션 한 표
 
-| 어노테이션 | 위치 | 의미 | HOJ 예 |
+| 어노테이션 | 위치 | 의미 | Ondal 예 |
 |---|---|---|---|
 | `@RestController` | 클래스 | 빈 + 모든 메서드 반환값을 본문(JSON)으로 | 컨트롤러 4개 |
 | `@RequestMapping("/api/cohorts")` | 클래스 | 공통 경로 prefix | `CohortController`, `AuthController`. `EnrollmentController`는 prefix가 제각각이라 메서드에 전체 경로 |
@@ -545,7 +545,7 @@ spring:
 | `ResponseEntity<T>` | 반환 타입 | 상태코드·헤더를 직접 지정 | `ResponseEntity.created(uri).body(dto)` → 201 + Location |
 | `@Tag`, `@Operation`, `@Schema` | 클래스/메서드/필드 | springdoc 문서용 - 동작에는 영향 없음 | 전 컨트롤러·DTO |
 
-- HOJ 반환 규약(design.md 4절): 200은 DTO 직접 반환, 201은 `ResponseEntity.created`, 204는 `void` + `@ResponseStatus`. 그 외 `ResponseEntity` 금지 - 컨트롤러 모양을 균일하게
+- Ondal 반환 규약(design.md 4절): 200은 DTO 직접 반환, 201은 `ResponseEntity.created`, 204는 `void` + `@ResponseStatus`. 그 외 `ResponseEntity` 금지 - 컨트롤러 모양을 균일하게
 
 ### 5.2 파라미터 바인딩과 타입 변환
 
@@ -560,14 +560,14 @@ spring:
   - JSON이 깨졌거나 타입이 안 맞음 → `HttpMessageNotReadableException` → 400
   - JSON에 없는 필드는 `null`(record 컴포넌트가 `null`로 들어옴) → 그래서 `CohortCreateRequest.operatorLoginIdsOrEmpty()` 같은 방어가 있음
 - `@Valid`: 역직렬화 **후** Bean Validation 실행
-  - 검증 어노테이션은 **요청 DTO 필드에만** 단다(HOJ 규약). 컨트롤러 파라미터에 직접 `@NotBlank`를 달지 않음
+  - 검증 어노테이션은 **요청 DTO 필드에만** 단다(Ondal 규약). 컨트롤러 파라미터에 직접 `@NotBlank`를 달지 않음
   - 실패 → `MethodArgumentNotValidException` → 400, 첫 번째 필드 오류를 `"필드명: 메시지"`로
 - 자주 쓰는 제약: `@NotBlank`(null·빈 문자열·공백만 불가), `@NotEmpty`(컬렉션 비어 있으면 불가), `@Size(max=)`, 컬렉션 원소 검증 `List<@NotBlank @Size(max = 50) String>`
 - Bean Validation을 거치지 않는 입력(경로 변수 `{loginId}`)은 서비스가 한 번 더 막음 - `UserService.findOrCreateMember`의 길이 검사(14.4절)
 
 ### 5.4 응답 - Jackson 직렬화 규칙
 
-| 자바 | JSON | HOJ 예 |
+| 자바 | JSON | Ondal 예 |
 |---|---|---|
 | `record` | 컴포넌트 이름 = 필드 | `CohortResponse` → `{"id":..,"name":..}` |
 | `enum` | 상수 이름 문자열 | `"status":"ACTIVE"`, `"myRole":"STUDENT"` |
@@ -618,7 +618,7 @@ public class WebConfig implements WebMvcConfigurer {
 
 - `HandlerInterceptor`
   - `preHandle(request, response, handler)`: 컨트롤러 전. `true` 반환 → 계속, `false` 또는 예외 → 중단. `handler`는 보통 `HandlerMethod`(컨트롤러 메서드 정보)
-  - `postHandle`, `afterCompletion`: 후처리. HOJ 미사용
+  - `postHandle`, `afterCompletion`: 후처리. Ondal 미사용
 - `HandlerMethodArgumentResolver`
   - `supportsParameter(parameter)`: 이 파라미터를 내가 채울지 판단 - `@LoginUser`가 붙고 타입이 `User`인지
   - `resolveArgument(...)`: 값을 만들어 반환 - 세션 id로 DB에서 `User` 조회
@@ -648,7 +648,7 @@ public @interface LoginUser { }
 - ORM(Object-Relational Mapping): 객체와 테이블의 대응을 선언하면 SQL 생성·변환을 라이브러리가 대행
 - 세 층의 역할
 
-| 층 | 정체 | HOJ에서 보이는 것 |
+| 층 | 정체 | Ondal에서 보이는 것 |
 |---|---|---|
 | JPA | 자바 표준 **인터페이스·어노테이션 명세** | `jakarta.persistence.*` - `@Entity`, `@Id`, `EntityManager` |
 | Hibernate | JPA의 **구현체** - 실제 SQL 생성·캐시·프록시 | SQL 로그, `ddl-auto`, `LazyInitializationException` |
@@ -658,7 +658,7 @@ public @interface LoginUser { }
 
 ### 6.2 엔티티 매핑 어노테이션 - `User`, `Cohort`, `Enrollment`에 쓰인 것 전부
 
-| 어노테이션 | 뜻 | HOJ 사용 |
+| 어노테이션 | 뜻 | Ondal 사용 |
 |---|---|---|
 | `@Entity` | 이 클래스 = 테이블 1개 | `User`, `Cohort`, `Enrollment` |
 | `@Table(name=, uniqueConstraints=)` | 테이블 이름·제약 | `users`(`user`는 PostgreSQL 예약어), `cohorts`, `enrollments` + `uk_enrollment_cohort_user(cohort_id, user_id)` |
@@ -676,7 +676,7 @@ public @interface LoginUser { }
 - 기본 생성자가 `protected`인 이유
   - JPA 스펙: 엔티티는 인자 없는 생성자 필수 - Hibernate가 리플렉션으로 객체를 만들고, 지연 로딩 프록시가 **이 클래스를 상속**해야 함(`private`이면 상속 불가)
   - `public`으로 열어 두면 `new Cohort()` 같은 불완전 객체 생성이 가능 → `protected`로 "JPA만 쓰라"고 표시
-- HOJ 엔티티 규약(이후 도메인 동일): `protected` 기본 생성자 + `private` 전체 생성자(`createdAt = Instant.now()`) + 정적 팩토리 `create(...)` + **setter 없음**(상태 변경은 의미 있는 도메인 메서드로만) + enum STRING + `Instant`. Lombok 미사용
+- Ondal 엔티티 규약(이후 도메인 동일): `protected` 기본 생성자 + `private` 전체 생성자(`createdAt = Instant.now()`) + 정적 팩토리 `create(...)` + **setter 없음**(상태 변경은 의미 있는 도메인 메서드로만) + enum STRING + `Instant`. Lombok 미사용
 
 ### 6.3 EntityManager와 영속성 컨텍스트 (핵심)
 
@@ -689,7 +689,7 @@ public @interface LoginUser { }
 - 플러시(flush) 시점: 트랜잭션 커밋 직전 / JPQL 쿼리 실행 직전(쿼리 결과 일관성) / `flush()` 명시 호출. 플러시 = SQL 전송이지 커밋이 아님
 - 엔티티의 네 상태
 
-| 상태 | 뜻 | HOJ 예 |
+| 상태 | 뜻 | Ondal 예 |
 |---|---|---|
 | 비영속(new) | 컨텍스트와 무관한 새 객체 | `Cohort.create(...)` 직후 |
 | 영속(managed) | 컨텍스트가 관리 - 더티 체킹 대상 | `save()` 후, `findById()` 결과 |
@@ -707,7 +707,7 @@ public @interface LoginUser { }
 - 단방향만 쓰는 이유: `Cohort` 안에 `List<Enrollment>` 같은 컬렉션을 두지 않음(11.4절). 양방향은 조회 한 번에 컬렉션이 딸려 오거나 순환 참조·직렬화 문제를 처음부터 유발. 소속이 필요하면 `EnrollmentRepository`로 별도 조회
 - **N+1 문제**: 분반 N개를 읽고(쿼리 1) 분반마다 소속을 지연 로딩하면 쿼리 N번 추가 → 총 N+1
   - 해법: (a) **fetch join**(`join fetch e.user`) - 한 쿼리로 연관까지 (b) **IN 조회** - id 목록으로 한 번에 (c) `@BatchSize` (d) DTO 프로젝션
-  - HOJ 적용: `findAllByCohortIdInWithUser(cohortIds)` - 분반 N개의 소속을 **쿼리 1번**으로 읽고 자바에서 `groupingBy`(12.4절)
+  - Ondal 적용: `findAllByCohortIdInWithUser(cohortIds)` - 분반 N개의 소속을 **쿼리 1번**으로 읽고 자바에서 `groupingBy`(12.4절)
 
 ### 6.5 트랜잭션과 `@Transactional` (핵심)
 
@@ -719,11 +719,11 @@ public @interface LoginUser { }
   4. 정상 종료 → 플러시 → 커밋 / 예외 → 롤백
 - 전파(propagation) 기본값 `REQUIRED`: 이미 트랜잭션이 있으면 **합류**, 없으면 새로 시작
   - `CohortService.create`(트랜잭션 A) 안에서 `enrollmentService.assign(...)`을 호출 → 같은 트랜잭션 A에 합류 → 운영진 지정이 409로 실패하면 **분반 INSERT도 함께 롤백**(주석 그대로)
-- 롤백 규칙: **`RuntimeException`·`Error` → 롤백, checked 예외 → 커밋**(기본). HOJ 예외 6종이 전부 `RuntimeException`을 상속한 이유
-- `readOnly = true`의 효과: Hibernate 플러시 모드 MANUAL(더티 체킹 스킵 → 성능), 드라이버에 읽기 전용 힌트, 읽기 복제본 라우팅 가능. HOJ 규약: 클래스에 `@Transactional`, 조회 메서드만 `readOnly = true`로 덮어씀(메서드 설정이 클래스 설정보다 우선)
+- 롤백 규칙: **`RuntimeException`·`Error` → 롤백, checked 예외 → 커밋**(기본). Ondal 예외 6종이 전부 `RuntimeException`을 상속한 이유
+- `readOnly = true`의 효과: Hibernate 플러시 모드 MANUAL(더티 체킹 스킵 → 성능), 드라이버에 읽기 전용 힌트, 읽기 복제본 라우팅 가능. Ondal 규약: 클래스에 `@Transactional`, 조회 메서드만 `readOnly = true`로 덮어씀(메서드 설정이 클래스 설정보다 우선)
 - 주의점(면접 단골)
   - `public` 메서드에만 적용(프록시 기반)
-  - **자기 호출(self-invocation)**: 같은 클래스의 메서드가 `this.otherMethod()`를 부르면 프록시를 거치지 않아 `@Transactional` 설정이 무시됨. HOJ에서 `assignStudents → assign`, `create → requireCohort`는 이미 같은 트랜잭션 안이라 문제 없음
+  - **자기 호출(self-invocation)**: 같은 클래스의 메서드가 `this.otherMethod()`를 부르면 프록시를 거치지 않아 `@Transactional` 설정이 무시됨. Ondal에서 `assignStudents → assign`, `create → requireCohort`는 이미 같은 트랜잭션 안이라 문제 없음
   - 트랜잭션 범위 = 영속성 컨텍스트 범위(기본) → 서비스 밖은 준영속
 - `CohortResponseAssembler`가 자체 `@Transactional`이 없는 이유: 항상 서비스 트랜잭션 **안에서** 호출된다는 전제(합류). 밖에서 단독 호출하면 LAZY가 터짐 - 주석에 명시
 
@@ -738,12 +738,12 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 - 인터페이스만 선언 → 기동 시 Spring Data가 **구현체(프록시)를 만들어 빈으로 등록**. `@Repository` 불필요
 - `JpaRepository<T, ID>`가 주는 것: `save`, `findById`(Optional), `findAll`, `delete`, `count`, `existsById` 등
   - `save()`: id가 `null`이면 `persist`(INSERT), 아니면 `merge`. 영속 상태 엔티티는 `save` 없이도 더티 체킹으로 반영됨
-  - `findById` → `Optional<T>`: 없으면 빈 Optional → HOJ는 `orElseThrow(() -> new NotFoundException(...))`로 404
+  - `findById` → `Optional<T>`: 없으면 빈 Optional → Ondal은 `orElseThrow(() -> new NotFoundException(...))`로 404
 - **쿼리 메서드 파생**: 메서드 이름을 파싱해 JPQL 생성
   - 형식: `findBy` + 속성 + 조건(`And`/`Or`/`In`/`Between`...) + `OrderBy` + 속성 + `Asc`/`Desc`
   - 중첩 속성: `findByCohortIdAndUserId` → `e.cohort.id = ? and e.user.id = ?` - 연관 엔티티의 id 비교는 **조인 없이 FK 컬럼으로** 처리(권한 판정용으로 가볍다는 주석의 근거)
   - 반환 타입: `Optional<T>`(0~1건), `List<T>`, `long count...`, `boolean exists...`
-  - 파싱 실패 = **기동 실패**. HOJ 규약의 근거: fetch join 조회 이름 `...WithUser`를 `@Query` 없이 쓰면 Spring Data가 `With`를 속성으로 해석하려다 기동 실패 → `WithXxx`에는 반드시 `@Query`
+  - 파싱 실패 = **기동 실패**. Ondal 규약의 근거: fetch join 조회 이름 `...WithUser`를 `@Query` 없이 쓰면 Spring Data가 `With`를 속성으로 해석하려다 기동 실패 → `WithXxx`에는 반드시 `@Query`
 - **`@Query` JPQL**: 테이블이 아니라 **엔티티·필드 기준**의 객체지향 쿼리. `:userId` 이름 바인딩 + `@Param`
   - `select e from Enrollment e join fetch e.cohort where e.user.id = :userId` - `join fetch`가 지연 로딩 연관을 한 번에 채움
   - `order by e.role asc` - enum은 STRING 저장이라 **알파벳순**(`OPERATOR` < `STUDENT`) → "운영진 먼저"가 우연히 맞음. 의도한 순서인지 주석으로 밝히는 규약
@@ -762,14 +762,14 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 
 ### 7.1 인증과 인가, 그리고 401·403·404
 
-| 용어 | 질문 | 실패 시 | HOJ 구현 위치 |
+| 용어 | 질문 | 실패 시 | Ondal 구현 위치 |
 |---|---|---|---|
 | 인증(Authentication) | **누구냐** | 401 `UNAUTHENTICATED` | `AuthInterceptor`, `LoginUserArgumentResolver` |
 | 인가(Authorization) | **해도 되냐** | 403 `FORBIDDEN` | `AuthorizationInterceptor` + `CohortAuthorizer` |
 | 존재 비노출 | 남의 것인지조차 알려 주지 않음 | 404 `NOT_FOUND` | 서비스의 스코프 조회(`findByIdAndCohortId`) |
 
 - 401의 이름이 "Unauthorized"인데 뜻은 "미인증" - 역사적 오명. 면접에서 설명할 수 있어야 함
-- HOJ의 선택: 비소속자가 없는 분반 id를 찔러도 **403**(권한 단계에서 먼저 막힘), ADMIN에게만 **404**. 하위 자원(다른 반의 과제 id 등)은 **404**로 존재 자체를 숨김(design.md 결정 11)
+- Ondal의 선택: 비소속자가 없는 분반 id를 찔러도 **403**(권한 단계에서 먼저 막힘), ADMIN에게만 **404**. 하위 자원(다른 반의 과제 id 등)은 **404**로 존재 자체를 숨김(design.md 결정 11)
 
 ### 7.2 세션 방식의 동작
 
@@ -792,7 +792,7 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 - 만료: `timeout` 동안 접근이 없으면 서버가 세션을 버림 → 다음 요청은 401
 - 세션 저장소가 **서버 메모리**: 재시작 시 전원 로그아웃, 서버 2대면 공유 불가 → 규모가 커지면 Spring Session(Redis). P1은 감수
 
-### 7.3 세션 vs 토큰(JWT) - 비교와 HOJ의 선택
+### 7.3 세션 vs 토큰(JWT) - 비교와 Ondal의 선택
 
 | | 세션 | 토큰(JWT) |
 |---|---|---|
@@ -801,14 +801,14 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 | 즉시 무효화(강제 로그아웃) | 쉬움 - 서버에서 지움 | 어려움 - 만료까지 유효, 블랙리스트 필요 |
 | 서버 확장 | 세션 공유 필요 | 자유로움 |
 | 구현 복잡도 | 낮음 | 만료·갱신(refresh)·저장 위치(XSS) 고민 |
-| HOJ(P1) | **채택** | 보류 |
+| Ondal(P1) | **채택** | 보류 |
 
 - 채택 근거([decisions/5](../decisions/5-세션-인증-채택-spring-security-보류.md)): 단일 서버, 즉시 무효화, 토큰 갱신 로직 불필요, 개발 중 `localhost` 포트가 달라도 same-site라 쿠키 문제 없음
 - 재검토 조건: 수평 확장, 모바일 네이티브 클라이언트, 홈페이지 SSO가 JWT로 확정
 
 ### 7.4 쿠키 속성
 
-| 속성 | 뜻 | HOJ |
+| 속성 | 뜻 | Ondal |
 |---|---|---|
 | `Path`, `Domain` | 어느 경로·호스트에 보낼지 | 기본(`/`, 현재 호스트) |
 | `Expires` / `Max-Age` | 수명. 없으면 **세션 쿠키**(브라우저 종료 시 삭제) | 세션 쿠키. 서버 측 만료는 별도 `timeout` |
@@ -819,9 +819,9 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 - `SameSite=Lax` 세부: 다른 사이트에서 링크를 눌러 **최상위 GET 이동**할 때만 실림. `Strict`는 그마저도 안 실려 외부 링크로 들어오면 로그아웃 상태, `None`은 `Secure` 필수
 - "같은 사이트"의 기준은 **등록 도메인**(포트 무관). `localhost:5173`과 `localhost:8080`은 same-site → 개발 중 문제 없음. 그러나 **출처(origin)**는 포트까지 보므로 CORS는 필요(7.6절)
 
-### 7.5 대표 공격과 HOJ의 방어
+### 7.5 대표 공격과 Ondal의 방어
 
-| 공격 | 내용 | HOJ 방어 |
+| 공격 | 내용 | Ondal 방어 |
 |---|---|---|
 | XSS | 악성 스크립트가 페이지에서 실행 | `HttpOnly` 쿠키(세션 id 탈취 방지). 출력 이스케이프는 FE(React 기본) |
 | CSRF | 로그인된 브라우저를 이용해 다른 사이트가 몰래 요청 | `SameSite=Lax`(1차). CSRF 토큰은 P1 미도입(design.md 결정 15) |
@@ -846,14 +846,14 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 ### 7.7 Spring Security 개요와 P1에서 보류한 이유
 
 - Spring Security: 서블릿 **필터 체인**으로 인증·인가를 처리하는 표준 프레임워크. `SecurityContextHolder`에 인증 객체(`Authentication`) 보관, `UserDetails`·`GrantedAuthority`(ROLE_XXX)의 전역 역할 모델, 로그인 폼·OAuth2·CSRF 토큰 등 내장
-- HOJ가 P1에서 쓰지 않는 이유([decisions/5](../decisions/5-세션-인증-채택-spring-security-보류.md))
+- Ondal이 P1에서 쓰지 않는 이유([decisions/5](../decisions/5-세션-인증-채택-spring-security-보류.md))
   1. 학습 부하: 필터 체인·인증 객체 모델이 주니어에게 "마법 상자". 코드를 읽고 복제할 수 있어야 함
-  2. 권한 모델 불일치: HOJ 권한의 핵심 = "**분반 범위** 역할"(`Enrollment.role`). 시큐리티의 전역 Role로 표현 불가 → 커스텀 판정 컴포넌트가 어차피 필요 → 밑 프레임워크는 단순할수록 유리
+  2. 권한 모델 불일치: Ondal 권한의 핵심 = "**분반 범위** 역할"(`Enrollment.role`). 시큐리티의 전역 Role로 표현 불가 → 커스텀 판정 컴포넌트가 어차피 필요 → 밑 프레임워크는 단순할수록 유리
   3. 세션의 이점(7.3절)
 - 대신 직접 구현한 것 = `HttpSession` + `HandlerInterceptor`(default-deny) + `@LoginUser` 리졸버 + 어노테이션 3종. 2부 13장·15장
 - 면접: "시큐리티 없이 인증을 구현했다"고만 하면 약함 → 위 근거 세 가지 + 재검토 조건까지 말할 수 있어야 함
 
-### 7.8 HOJ 보안 설계의 세 원칙
+### 7.8 Ondal 보안 설계의 세 원칙
 
 - **default-deny(기본 거부)**: `/api/**`는 기본 잠금. 공개 경로는 `AuthPaths.PUBLIC` 한 곳에만. 새 API는 아무 설정 없이 로그인 필수
 - **fail-closed(실패 시 닫힘)**: 권한 어노테이션을 잊으면 "열림"이 아니라 **부팅 실패**(기동 검증) 또는 **500**(인터셉터). 판단 불가 = 거부
@@ -867,14 +867,14 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 
 - 목적: 회귀 방지(고치다 다른 곳이 깨지는 것), 규약 집행(역할 × 엔드포인트 → 상태코드가 문서가 아니라 코드로 고정)
 - 테스트 피라미드
-  - 단위 테스트: 클래스 하나, 빠름, 스프링 없음 - HOJ `AuthorizationMappingValidatorTest`
-  - 통합 테스트: 여러 층을 실제로 연결 - HOJ API 테스트 3개(인터셉터·컨트롤러·서비스·JPA·실제 DB 전부)
-  - E2E: 브라우저까지 - HOJ BE 범위 밖(FE가 헤드리스 브라우저로 수행)
-- HOJ 선택: **API 통합 테스트 위주**(요청 → 상태코드·JSON 검증) + 검증기 규칙은 단위 테스트. 이유 = 권한·트랜잭션·LAZY 같은 문제는 층을 합쳐야 드러남
+  - 단위 테스트: 클래스 하나, 빠름, 스프링 없음 - Ondal `AuthorizationMappingValidatorTest`
+  - 통합 테스트: 여러 층을 실제로 연결 - Ondal API 테스트 3개(인터셉터·컨트롤러·서비스·JPA·실제 DB 전부)
+  - E2E: 브라우저까지 - Ondal BE 범위 밖(FE가 헤드리스 브라우저로 수행)
+- Ondal 선택: **API 통합 테스트 위주**(요청 → 상태코드·JSON 검증) + 검증기 규칙은 단위 테스트. 이유 = 권한·트랜잭션·LAZY 같은 문제는 층을 합쳐야 드러남
 
 ### 8.2 JUnit 5 기본과 보조 라이브러리
 
-| 어노테이션·도구 | 뜻 | HOJ 예 |
+| 어노테이션·도구 | 뜻 | Ondal 예 |
 |---|---|---|
 | `@Test` | 테스트 메서드 | 전부 |
 | `@Nested` | 내부 클래스로 묶음 - 엔드포인트별 그룹 | `class Create { ... }` |
@@ -890,11 +890,11 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 
 | 어노테이션 | 띄우는 것 | 용도 |
 |---|---|---|
-| `@SpringBootTest` | **전체** ApplicationContext(모든 빈). 기본 `webEnvironment = MOCK`(실제 포트 안 열림) | HOJ API 테스트 - 인터셉터·리졸버·예외 핸들러·트랜잭션·JPA 전부 실제로 |
-| `@WebMvcTest` | 컨트롤러 층만(서비스는 `@MockitoBean`) | 컨트롤러 단독 검증 - HOJ 미사용 |
-| `@DataJpaTest` | JPA 층만 | 리포지토리 검증 - HOJ 미사용 |
+| `@SpringBootTest` | **전체** ApplicationContext(모든 빈). 기본 `webEnvironment = MOCK`(실제 포트 안 열림) | Ondal API 테스트 - 인터셉터·리졸버·예외 핸들러·트랜잭션·JPA 전부 실제로 |
+| `@WebMvcTest` | 컨트롤러 층만(서비스는 `@MockitoBean`) | 컨트롤러 단독 검증 - Ondal 미사용 |
+| `@DataJpaTest` | JPA 층만 | 리포지토리 검증 - Ondal 미사용 |
 
-- HOJ가 `@SpringBootTest`만 쓰는 이유: 검증하려는 것이 "권한 + 규칙 + DB"의 합작이라 슬라이스 테스트로는 의미가 없음
+- Ondal이 `@SpringBootTest`만 쓰는 이유: 검증하려는 것이 "권한 + 규칙 + DB"의 합작이라 슬라이스 테스트로는 의미가 없음
 - **컨텍스트 캐싱**: 같은 설정(어노테이션·프로필·Import)의 테스트 클래스들은 컨텍스트를 **한 번만** 기동해 공유 → `ApiTestSupport`를 모든 API 테스트가 상속하는 구조 = 컨텍스트 1개, PostgreSQL 컨테이너 1개
 - `@ActiveProfiles("test")`: local 시더를 빈에서 제외. 픽스처는 각 테스트가 직접 생성
 
@@ -914,7 +914,7 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 ### 8.6 테스트 간 격리 - 롤백 방식 vs TRUNCATE 방식
 
 - 흔한 방식: 테스트 클래스에 `@Transactional` → 각 테스트가 트랜잭션 안에서 돌고 끝나면 롤백
-- HOJ가 **의도적으로 미채택**한 이유(`DatabaseCleaner` 주석): MockMvc 요청 전체가 테스트 트랜잭션 **안**에서 돌아 버림 → 영속성 컨텍스트가 요청 끝까지 열려 있어 `open-in-view=false`가 드러내야 할 `LazyInitializationException`·N+1이 테스트에서는 안 보이고 실제 서버에서만 터짐
+- Ondal이 **의도적으로 미채택**한 이유(`DatabaseCleaner` 주석): MockMvc 요청 전체가 테스트 트랜잭션 **안**에서 돌아 버림 → 영속성 컨텍스트가 요청 끝까지 열려 있어 `open-in-view=false`가 드러내야 할 `LazyInitializationException`·N+1이 테스트에서는 안 보이고 실제 서버에서만 터짐
 - 대신: 요청은 실제와 같이 **자기 트랜잭션**으로 돌게 두고, 각 테스트 후 `TRUNCATE ... RESTART IDENTITY CASCADE`로 전부 비움(`@AfterEach`)
 
 ### 8.7 테스트 작성 스타일
@@ -937,7 +937,7 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 4. 출처(origin)의 세 요소, `localhost:5173`과 `:8080`이 다른 출처인 이유 (1.8)
 
 **서블릿·MVC (2장, 5장)**
-5. Filter와 Interceptor의 차이, HOJ가 인터셉터를 고른 이유 (2.3)
+5. Filter와 Interceptor의 차이, Ondal이 인터셉터를 고른 이유 (2.3)
 6. DispatcherServlet이 요청을 처리하는 순서 - HandlerMapping → 인터셉터 → 아규먼트 리졸버 → 컨트롤러 → 메시지 컨버터 (2.4)
 7. 인터셉터에서 던진 예외가 `@RestControllerAdvice`에 도달하는가 (2.4, 17장)
 8. `@RestController`와 `@Controller`의 차이 (2.5, 5.1)
@@ -970,14 +970,14 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 29. `IDENTITY` 전략이 쓰기 지연과 충돌하는 이유 (6.2)
 30. `EnumType.ORDINAL`이 위험한 이유 (6.2)
 31. 지연 로딩·프록시·`LazyInitializationException` (6.4)
-32. N+1 문제와 해법 3가지, HOJ 적용 (6.4)
+32. N+1 문제와 해법 3가지, Ondal 적용 (6.4)
 33. `@Transactional`의 전파 기본값과 롤백 규칙 (6.5)
 34. `readOnly = true`의 효과 (6.5)
 35. 쿼리 메서드 파생 규칙, `findByCohortIdAndUserId`가 조인 없이 동작하는 이유 (6.6)
 36. fetch join과 일반 join의 차이 (6.4, 6.6)
 
 **보안 (7장)**
-37. 세션 방식과 토큰 방식의 비교, HOJ 선택 근거 (7.3)
+37. 세션 방식과 토큰 방식의 비교, Ondal 선택 근거 (7.3)
 38. 세션에 엔티티 대신 id만 넣는 이유 (7.2)
 39. `SameSite=Lax`·`HttpOnly`·`Secure`가 각각 막는 것 (7.4, 7.5)
 40. 세션 고정 공격과 방어 (7.5)
@@ -1001,7 +1001,7 @@ public interface CohortRepository extends JpaRepository<Cohort, Long> {
 
 ### 10.1 문제
 
-- HOJ에 앞으로 붙는 도메인: 분반, 과제, 제출, 현황판
+- Ondal에 앞으로 붙는 도메인: 분반, 과제, 제출, 현황판
 - 도메인마다 구조가 다르면 읽는 사람이 매번 새로 학습해야 함
 - → 첫 도메인 **분반(Cohort)** 을 만들면서 "이후 도메인이 그대로 따를 틀"까지 함께 수립
 - 분반 = "2026-2 C언어"처럼 학기·트랙 단위로 열리는 반. 모든 과제·제출은 어떤 분반에 속함 → 첫 도메인으로 선정
@@ -1082,7 +1082,7 @@ public class User {
 }
 ```
 
-- 홈페이지 연동 후에는 "홈페이지 계정의 로컬 사본" - 신원의 원본은 홈페이지, HOJ는 `loginId`로 매칭
+- 홈페이지 연동 후에는 "홈페이지 계정의 로컬 사본" - 신원의 원본은 홈페이지, Ondal은 `loginId`로 매칭
 - 정적 팩토리가 둘인 이유: `admin(...)`은 일반 코드 경로에서 호출 금지를 이름으로 표시
 - `GlobalRole {ADMIN, MEMBER}`: **사람에게** 붙는 전역 역할
 
@@ -1306,7 +1306,7 @@ student1이 받는 응답 예:
 
 `/api/**`의 모든 컨트롤러 메서드는 셋 중 **정확히 하나** 부착
 
-| 어노테이션 | 뜻 | HOJ 사용 예 |
+| 어노테이션 | 뜻 | Ondal 사용 예 |
 |---|---|---|
 | `@LoginOnly` | 로그인만 되어 있으면 됨. 분반과 무관한 API | `GET /api/auth/me`, `GET /api/me/cohorts` |
 | `@AdminOnly` | 전역 ADMIN만. 경로에 `{cohortId}`가 있어도 소속은 보지 않음 | 분반 생성·수정·보관·목록, 운영진 지정/해제 |
@@ -1386,7 +1386,7 @@ private static Long readCohortId(HttpServletRequest request, HandlerMethod handl
   - (b) `@CohortRole`인데 경로에 `{cohortId}` 없음
   - (c) 경로에 `{cohortId}`가 있는데 유효 어노테이션이 `@CohortRole`도 `@AdminOnly`도 아님 - 분반 자원을 로그인만으로 열면 안 됨
   - (d) 한 위치(메서드 또는 클래스)에 어노테이션 둘 이상
-  - (e) 우리 패키지(`kr.haedal.hoj`)의 컨트롤러가 `/api/` 밖에 매핑 - `/apo/...` 같은 오타로 인터셉터 두 개를 통째로 비껴가는 것 방지
+  - (e) 우리 패키지(`kr.haedal.ondal`)의 컨트롤러가 `/api/` 밖에 매핑 - `/apo/...` 같은 오타로 인터셉터 두 개를 통째로 비껴가는 것 방지
 - `/swagger-ui`, `/v3/api-docs`, `/error`처럼 `/api/` 밖의 라이브러리 핸들러는 대상 아님
 - 효과: "어노테이션 붙이는 걸 잊는" 실수를 컴파일 다음 단계에서, 요청이 오기 전에 차단. 런타임의 500(13.2절)은 2중 안전망
 - `validate(...)`는 정적·순수 함수로 분리 → 스프링 없이 가짜 매핑으로 단위 테스트(19장)
@@ -1407,7 +1407,7 @@ private static Long readCohortId(HttpServletRequest request, HandlerMethod handl
 | `remove(cohortId, loginId, expected)` | 소속 해제 | `ensureActive()`. `expected` 역할의 소속만 지움. 대상이 없거나 역할이 다르면 404. 성공 204 |
 
 - `assign`이 "없는 사람은 만든다"인 이유
-  - 아직 HOJ에 로그인한 적 없는 부원도 loginId만으로 사전 등록 가능해야 함(개강 전 세팅)
+  - 아직 Ondal에 로그인한 적 없는 부원도 loginId만으로 사전 등록 가능해야 함(개강 전 세팅)
   - 그때 생성된 `User`의 이름은 임시로 loginId와 동일 → 홈페이지 연동 시 실제 이름으로 갱신
   - 이 find-or-create는 `UserService.findOrCreateMember`에 위치 - 스텁 로그인과 소속 배정이 공용. loginId가 비었거나 50자 초과면 400(경로 변수는 Bean Validation을 안 거치므로 여기서 한 번 더)
 - `CohortService.create`: 분반 저장 후 `enrollmentService.assign(..., OPERATOR)` 호출 - 같은 트랜잭션(6.5절 전파) → 운영진 지정이 409로 실패하면 **분반 생성도 함께 롤백**
@@ -1455,11 +1455,11 @@ public UserResponse login(@RequestBody @Valid LoginRequest request, HttpServletR
 
 ## 16. 설정·CORS·시더·springdoc
 
-- `application.yml` 전체 해설은 4.5절. HOJ 관점 요약: `local` 기본 프로필, `ddl-auto: update`(운영 전 Flyway), `open-in-view: false`, Jackson UTC, 세션 12h + `SameSite=Lax` + `HttpOnly`, Hibernate SQL 로그, local datasource = docker compose
+- `application.yml` 전체 해설은 4.5절. Ondal 관점 요약: `local` 기본 프로필, `ddl-auto: update`(운영 전 Flyway), `open-in-view: false`, Jackson UTC, 세션 12h + `SameSite=Lax` + `HttpOnly`, Hibernate SQL 로그, local datasource = docker compose
 
 ### 16.1 `WebConfig` - 세 가지 등록 (5.6절)
 
-- CORS: `hoj.cors.allowed-origins`(기본 `http://localhost:5173`) + `allowCredentials(true)`. 운영에서 Pages 도메인을 환경변수로 추가, 리버스 프록시로 같은 도메인에 두면 불필요
+- CORS: `ondal.cors.allowed-origins`(기본 `http://localhost:5173`) + `allowCredentials(true)`. 운영에서 Pages 도메인을 환경변수로 추가, 리버스 프록시로 같은 도메인에 두면 불필요
 - 인터셉터 2개: 순서·경로·제외 목록(12.2절)
 - `LoginUserArgumentResolver` 등록
 
@@ -1645,8 +1645,8 @@ DTO 요약:
 ## 21. 파일 지도
 
 ```
-src/main/java/kr/haedal/hoj/
-├─ HojApplication.java                    부팅 진입점 (3.6)
+src/main/java/kr/haedal/ondal/
+├─ OndalApplication.java                    부팅 진입점 (3.6)
 ├─ user/
 │  ├─ entity/User.java                    사람. globalRole ADMIN|MEMBER. member()/admin() 팩토리, isAdmin() (11.2)
 │  ├─ entity/GlobalRole.java              ADMIN | MEMBER
@@ -1691,7 +1691,7 @@ src/main/java/kr/haedal/hoj/
    └─ error/                              ErrorResponse{code,message}, 예외 6종, GlobalExceptionHandler (17장)
 
 src/main/resources/application.yml        (4.5)
-src/test/java/kr/haedal/hoj/
+src/test/java/kr/haedal/ondal/
 ├─ support/ApiTestSupport, LoginHelper, DatabaseCleaner, PostgresContainerConfig   (19.1)
 ├─ cohort/CohortApiTest                   22개
 ├─ enrollment/EnrollmentApiTest           34개
@@ -1734,7 +1734,7 @@ build.gradle, settings.gradle, docker-compose.yml   (4장)
 17. 세션에 id만 저장하는 이유, 로그인 시 세션을 새로 만드는 이유 (15.2, 7.2, 7.5)
 18. `AuthService`를 인터페이스로 둔 이유 (15.1, 3.11)
 19. 시더가 테스트에서 돌지 않는 원리 (16.2, 3.9)
-20. HOJ 예외가 전부 `RuntimeException`인 이유 (17.1, 6.5)
+20. Ondal 예외가 전부 `RuntimeException`인 이유 (17.1, 6.5)
 21. 인터셉터에서 던진 401이 JSON으로 나가는 경로 (17.2, 2.4)
 22. `DatabaseCleaner`가 롤백 대신 TRUNCATE를 쓰는 이유 (19.1, 8.6)
 23. 검증기 테스트가 스프링 없이 도는 방법 (19.2)
