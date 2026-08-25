@@ -136,7 +136,8 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 P2·P3에서 추가 예정 (지금은 그리지 않음 - 결정 시 이 문서에 확장):
 
 - submissions 채점 결과 열: 판정(result)·실행시간·메모리 (P2 Judge0)
-- problems 테이블: OJ 문제 - 난이도·정답률 (P3, 티어 시스템의 입력값)
+- OJ 문제 확장: assignments의 `cohort_id` NULL 허용 전환 + 난이도·정답률 열 (P3 - "OJ 문제 = 분반 없는 과제" 원칙, 별도 problems 테이블 없음. 난이도는 티어 시스템의 입력값)
+- 문제 태그: `tags` + 문제-태그 N:M 조인 테이블 (P3 - 관리자 큐레이션 고정 목록, 자유 입력 금지. 탐색 필터·태그별 실력 분석용, 2026-08-25 구상)
 - xp_events 테이블: 경험치 획득 이력 (P3 티어 - mvp-scope 5절 구상 메모)
 - attendance(출석)·Session 엔티티: 출석부 P2 이월 확정(2026-08-25) - 도입 시 `assignments.session_no`를 Session FK로 승격 재검토
 - notices 테이블: 공지사항 P2 (FE 화면 구현 완료 상태)
