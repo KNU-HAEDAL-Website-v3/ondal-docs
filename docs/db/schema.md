@@ -1,10 +1,10 @@
 # Ondal P1 DB 스키마 (확정)
 
-> 확정일: 2026-08-19 (PM 결정) · 기준 코드: BE `main` `d037cc4` (users·cohorts·enrollments 구현 완료, assignments·submissions는 이 문서가 설계 원본)
+> 확정일: 2026-08-19 (PM 결정) · 갱신: 2026-08-25 (차시·제출 언어 열 추가) · 기준 코드: BE `main` `d037cc4` (users·cohorts·enrollments 구현 완료, assignments·submissions는 이 문서가 설계 원본)
 > P1 스키마의 단일 출처 - 변경 시 이 문서에 결정 기록 + 코드·ERD(ERDCloud) 동시 갱신
 > P1 바깥(자동 채점, QnA, 공지, 출석부)은 미포함 - 스코프 제외 또는 미결 상태라 지금 그리면 추측이 됨
 
-## 1. 확정 결정 (2026-08-19)
+## 1. 확정 결정
 
 | # | 결정 | 내용 |
 |---|---|---|
@@ -13,6 +13,8 @@
 | 3 | 제출 형식 = 본문 + 링크 | 본문(코드 붙여넣기 **또는** zip 업로드, 탭으로 택1) + 링크(선택, GitHub·배포 URL). **본문 또는 링크 최소 1개**여야 제출 가능. 과제별 제출 타입 지정은 폐기 - 모든 과제가 세 방식을 상시 허용. |
 | 4 | 과제 삭제 = 경고 후 연쇄 | 운영진이 삭제 가능. "제출물 N건이 함께 삭제됩니다" 경고 → 제출 이력 + 서버의 zip 파일까지 삭제. |
 | 5 | 분반 = 보관 기본 + 삭제 공존 | 학기 종료는 **보관**(기본 경로, 열람 유지 - 홈 "지난 소속"이 이 데이터를 쓴다). **영구 삭제**는 ADMIN 전용 최후 수단 - 소속·과제·제출물·파일 전부 연쇄 삭제, 분반 이름을 입력해야 확인되는 강한 경고. **users는 어떤 삭제에도 지워지지 않는다.** |
+| 6 | 차시 = 과제의 선택 번호 | (2026-08-25) `assignments.session_no` 정수. 운영진 자유 입력 - 중복·건너뜀 허용, 차시 밖 과제는 NULL. 목록 기본 정렬 = 차시 오름차순(NULL 마지막) → 등록순. 차시 자체가 속성(날짜·제목)을 갖게 되는 출석부(P2) 도입 시 Session 엔티티 승격 재검토. |
+| 7 | 제출 언어 저장 | (2026-08-25) `submissions.language` - 코드 제출일 때만(선택). 화면 표시·코드 하이라이팅용, 채점(P2)과 무관하게 P1부터 저장. |
 
 - 파일 저장: P1은 서버 로컬 디스크
 - S3 등 전환 대비: `stored_path`에 키만 넣으면 되도록 열 설계
@@ -24,7 +26,7 @@
 
 ```sql
 -- =========================================================================
--- Ondal P1 DB 스키마 - 확정본 2026-08-19 (docs/db/schema.md)
+-- Ondal P1 DB 스키마 - 확정본 2026-08-19 · 갱신 2026-08-25 (docs/db/schema.md)
 -- ERDCloud 가져오기용 MySQL 문법. 실제 DB는 PostgreSQL 16.
 -- =========================================================================
 
@@ -62,6 +64,7 @@ CREATE TABLE enrollments (
 CREATE TABLE assignments (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'PK',
     cohort_id   BIGINT       NOT NULL COMMENT 'FK → cohorts.id - 과제는 분반에 속한다. 조회는 항상 (id, cohort_id) 스코프(다른 반 과제면 404)',
+    session_no  INT          NULL     COMMENT '차시 번호(선택) - 운영진 자유 입력, 중복·건너뜀 허용. 차시 밖 과제는 NULL. 목록 기본 정렬: 차시 오름차순(NULL 마지막) → 등록순',
     title       VARCHAR(200) NOT NULL COMMENT '과제 제목',
     description TEXT         NULL     COMMENT '과제 내용 - 문제 링크 포함 자유 텍스트',
     due_at      DATETIME(6)  NOT NULL COMMENT '마감 시각(UTC) - 운영진이 생성 시 설정. 마감 후 제출은 지각 표시(차단 아님). 마감을 수정하면 지각 판정도 새 마감 기준으로 다시 계산된다',
@@ -76,6 +79,7 @@ CREATE TABLE submissions (
     assignment_id  BIGINT        NOT NULL COMMENT 'FK → assignments.id',
     user_id        BIGINT        NOT NULL COMMENT 'FK → users.id - enrollment이 아니라 사용자 직접 참조. 소속이 해제돼도 제출물은 남는다 (design.md 1절)',
     code_text      TEXT          NULL COMMENT '본문·코드 - 붙여넣은 코드 텍스트. 본문은 코드/파일 중 택1(서비스 강제)',
+    language       VARCHAR(30)   NULL COMMENT '본문·코드 - 제출 언어(예: Python 3, C++ 17). 코드 제출일 때만(선택). 표시·하이라이팅용, 채점과 무관',
     file_name      VARCHAR(255)  NULL COMMENT '본문·파일 - 업로드한 zip의 원본 파일명',
     stored_path    VARCHAR(500)  NULL COMMENT '본문·파일 - 저장 위치 키. P1은 서버 로컬 디스크, S3 전환 시에도 이 열에 키만',
     file_size      BIGINT        NULL COMMENT '본문·파일 - 크기(byte). 용량 관리·삭제 경고 문구용',
@@ -128,6 +132,14 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
   - "본문은 코드/파일 중 택1"은 서비스 규칙으로만 강제 (정책 변경 가능성 → DB에 굳히지 않음)
 - 제약 이름: 코드에 실제 명시된 것은 `uk_enrollment_cohort_user`뿐 - 나머지는 현재 Hibernate가 무작위 이름으로 생성, Flyway 전환 시 이 문서의 이름으로 고정
 - `ddl-auto: update`는 열 삭제 미수행 → 기존 개발 DB의 잔여 열은 무시 (운영 전 Flyway로 정리)
+
+P2·P3에서 추가 예정 (지금은 그리지 않음 - 결정 시 이 문서에 확장):
+
+- submissions 채점 결과 열: 판정(result)·실행시간·메모리 (P2 Judge0)
+- problems 테이블: OJ 문제 - 난이도·정답률 (P3, 티어 시스템의 입력값)
+- xp_events 테이블: 경험치 획득 이력 (P3 티어 - mvp-scope 5절 구상 메모)
+- attendance(출석)·Session 엔티티: 출석부 P2 이월 확정(2026-08-25) - 도입 시 `assignments.session_no`를 Session FK로 승격 재검토
+- notices 테이블: 공지사항 P2 (FE 화면 구현 완료 상태)
 
 ## 5. 관련 문서
 
