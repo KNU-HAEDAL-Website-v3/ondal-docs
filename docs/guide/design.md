@@ -141,18 +141,20 @@ boolean canManage(User user, Cohort cohort, EnrollmentRole myRoleOrNull) // 응�
 | CONFLICT | 409 | 신규. `ConflictException(message)` - 역할 충돌 등 | 안내 |
 | COHORT_ARCHIVED | 409 | 신규. `CohortArchivedException` - "보관된 분반은 변경할 수 없습니다. 보관을 해제한 뒤 다시 시도하세요." | 안내 (홈으로 보내지 않음). FE는 `status == ARCHIVED`면 쓰기 UI를 사전 비활성 |
 
-| # | 메서드·경로 | 권한 | 컨트롤러 | 요청 | 응답 |
+| # | 기능 | 메서드·경로 | 권한 | 요청 | 응답 |
 |---|---|---|---|---|---|
-| 1 | `GET /api/me/cohorts` | @LoginOnly | Enrollment | - | `[CohortResponse]` 소속된 모든 분반(ACTIVE·ARCHIVED 모두, ACTIVE 먼저). 빈 배열 = Enrollment 없음 |
-| 2 | `GET /api/cohorts?status=ACTIVE` | @AdminOnly | Cohort | status 선택(기본 ACTIVE) | `[CohortResponse]` |
-| 3 | `POST /api/cohorts` | @AdminOnly | Cohort | `CohortCreateRequest {name, description?, operatorLoginIds: []}` | 201 + Location + `CohortResponse` |
-| 4 | `GET /api/cohorts/{cohortId}` | @CohortRole(STUDENT) | Cohort | - | `CohortResponse` |
-| 5 | `PUT /api/cohorts/{cohortId}` | @AdminOnly | Cohort | `CohortUpdateRequest {name, description?}` | 200 `CohortResponse`. 보관 중 → 409 COHORT_ARCHIVED |
-| 6 | `POST /api/cohorts/{cohortId}/archive` | @AdminOnly | Cohort | - | 200 `CohortResponse` (멱등) |
-| 7 | `POST /api/cohorts/{cohortId}/restore` | @AdminOnly | Cohort | - | 200 `CohortResponse` (멱등) |
-| 8 | `GET /api/cohorts/{cohortId}/members` | @CohortRole(OPERATOR) | Enrollment | - | `[MemberResponse]` 전체 (역할 필터 없음). **STUDENT는 못 본다** - 학생에게 다른 사람 정보 비노출 |
-| 9 | `PUT /api/cohorts/{cohortId}/operators/{loginId}` | @AdminOnly | Enrollment | - | 200 `MemberResponse`. 미소속 → OPERATOR로 생성(User find-or-create), STUDENT → 승격, 이미 OPERATOR → 그대로(멱등). 보관 중 → 409 |
-| 10 | `DELETE /api/cohorts/{cohortId}/operators/{loginId}` | @AdminOnly | Enrollment | - | 204. **OPERATOR Enrollment만 삭제.** STUDENT·미소속·User 없음 → 404. 마지막 운영진 해제도 허용(ADMIN은 항상 운영자 이상). 보관 중 → 409 |
+| 1 | 내 분반 목록 | `GET /api/me/cohorts` | @LoginOnly | - | `[CohortResponse]` 소속된 모든 분반(ACTIVE·ARCHIVED 모두, ACTIVE 먼저). 빈 배열 = Enrollment 없음 |
+| 2 | 분반 목록 조회(관리자) | `GET /api/cohorts?status=ACTIVE` | @AdminOnly | status 선택(기본 ACTIVE) | `[CohortResponse]` |
+| 3 | 분반 생성 | `POST /api/cohorts` | @AdminOnly | `CohortCreateRequest {name, description?, operatorLoginIds: []}` | 201 + Location + `CohortResponse` |
+| 4 | 분반 상세 조회 | `GET /api/cohorts/{cohortId}` | @CohortRole(STUDENT) | - | `CohortResponse` |
+| 5 | 분반 수정 | `PUT /api/cohorts/{cohortId}` | @AdminOnly | `CohortUpdateRequest {name, description?}` | 200 `CohortResponse`. 보관 중 → 409 COHORT_ARCHIVED |
+| 6 | 분반 보관 | `POST /api/cohorts/{cohortId}/archive` | @AdminOnly | - | 200 `CohortResponse` (멱등) |
+| 7 | 분반 보관 해제 | `POST /api/cohorts/{cohortId}/restore` | @AdminOnly | - | 200 `CohortResponse` (멱등) |
+| 8 | 분반 명부 조회 | `GET /api/cohorts/{cohortId}/members` | @CohortRole(OPERATOR) | - | `[MemberResponse]` 전체 (역할 필터 없음). **STUDENT는 못 본다** - 학생에게 다른 사람 정보 비노출 |
+| 9 | 운영진 지정·승격 | `PUT /api/cohorts/{cohortId}/operators/{loginId}` | @AdminOnly | - | 200 `MemberResponse`. 미소속 → OPERATOR로 생성(User find-or-create), STUDENT → 승격, 이미 OPERATOR → 그대로(멱등). 보관 중 → 409 |
+| 10 | 운영진 해제 | `DELETE /api/cohorts/{cohortId}/operators/{loginId}` | @AdminOnly | - | 204. **OPERATOR Enrollment만 삭제.** STUDENT·미소속·User 없음 → 404. 마지막 운영진 해제도 허용(ADMIN은 항상 운영자 이상). 보관 중 → 409 |
+
+- 담당 컨트롤러: #2~#7 = `CohortController`, #1·#8~#10 = `EnrollmentController`
 
 다음 슬라이스: `POST /api/cohorts/{cohortId}/students {loginIds: []}` (명단 붙여넣기, @CohortRole(OPERATOR)), `DELETE .../students/{loginId}`. 이미 OPERATOR인 loginId가 섞이면 → 409 CONFLICT (역할을 바꾸지 않음).
 

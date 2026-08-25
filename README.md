@@ -25,13 +25,25 @@
 
 ## 기술 스택
 
-- 백엔드: Spring Boot
-- 프론트엔드: 추후 결정
+- 백엔드: Spring Boot (Java 21) + PostgreSQL 16
+- 프론트엔드: React
 - 채점 엔진: Judge0 CE (P2)
 
 ## 문서
 
-- [기여 가이드](CONTRIBUTING.md) - 프로젝트 구조, 기여 방법
+처음 온 사람은 아래 순서대로 읽으면 프로젝트 전체가 잡힌다.
+
+| 순서 | 문서 | 내용 |
+|---|---|---|
+| 1 | [mvp-scope.md](docs/mvp-scope.md) | P1 범위와 완료 기준 - 무엇을 만드는가 |
+| 2 | [permissions.md](docs/permissions.md) | 권한 모델 - 누가 무엇을 할 수 있는가 |
+| 3 | [flows-and-usecases.md](docs/flows-and-usecases.md) | 화면 흐름과 유스케이스 |
+| 4 | [db/schema.md](docs/db/schema.md) | P1 DB 스키마 확정본 |
+| 5 | [guide/](docs/guide/) | BE 공통 규약(design.md) + 온보딩 안내서(1st guide) |
+| 6 | [enrollment/](docs/enrollment/) · [assignment/](docs/assignment/) | 도메인별 설계·API 명세 |
+| 7 | [decisions/](docs/decisions/) | 의사결정 기록 - 왜 이렇게 만들었는가 |
+
+- [기여 가이드](CONTRIBUTING.md) - 기여 방법, 문서 작성 규칙
 - [행동 강령](CODE_OF_CONDUCT.md)
 - [회의록](docs/meetings/)
 

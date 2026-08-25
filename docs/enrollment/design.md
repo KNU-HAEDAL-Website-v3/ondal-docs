@@ -6,13 +6,14 @@
 
 ## 1. 추가 범위
 
-- 수강생 배정/제외 API 2개
+Enrollment(소속)는 "누가 어느 분반에서 무슨 역할인가"를 다루는 도메인이다. 도메인의 대부분(내 분반, 명부, 운영진 지정/해제)은 Cohort 슬라이스에서 구현됐고, 이 슬라이스는 수강생 배정·제외 2개 API만 추가한다.
+
 - `EnrollmentService.assign/remove`: Cohort 슬라이스에서 구현 완료 → STUDENT로 호출하는 엔드포인트만 추가
 
-| # | 메서드·경로 | 권한 | 성공 | 주요 실패 |
-|---|---|---|---|---|
-| 11 | `POST /api/cohorts/{cohortId}/students` `{loginIds: [..]}` | `@CohortRole(OPERATOR)` | 200 - **갱신된 명부 전체** (`GET /members`와 같은 모양) | 400(빈 목록·loginId 검증), 403, 404(분반), 409(이미 운영진인 loginId), 409 보관 |
-| 12 | `DELETE /api/cohorts/{cohortId}/students/{loginId}` | `@CohortRole(OPERATOR)` | 204 | 404(미소속·운영진·모르는 loginId), 409 보관 |
+| # | 기능 | 메서드·경로 | 권한 | 성공 | 주요 실패 |
+|---|---|---|---|---|---|
+| 11 | 수강생 일괄 배정 | `POST /api/cohorts/{cohortId}/students` `{loginIds: [..]}` | `@CohortRole(OPERATOR)` | 200 - **갱신된 명부 전체** (`GET /members`와 같은 모양) | 400(빈 목록·loginId 검증), 403, 404(분반), 409(이미 운영진인 loginId), 409 보관 |
+| 12 | 수강생 제외 | `DELETE /api/cohorts/{cohortId}/students/{loginId}` | `@CohortRole(OPERATOR)` | 204 | 404(미소속·운영진·모르는 loginId), 409 보관 |
 
 ## 2. 결정
 
