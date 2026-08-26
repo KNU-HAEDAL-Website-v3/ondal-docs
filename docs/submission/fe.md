@@ -3,17 +3,19 @@
 > 역할: FE 작업자용 - 제출 API와 화면의 매핑, 표시 규칙
 > 명세: [api.md](api.md) - 계약의 원본은 BE 구현 후 springdoc · FE 공통 규칙: ondal-FE `CLAUDE.md`
 
-## 1. 화면 매핑
+## 1. 화면 매핑 (구현 완료 2026-08-26 - FE PR #16 기준)
 
-- 과제 상세(`AssignmentDetailPage`)의 제출란 placeholder → 실제 제출 폼으로 교체
-  - 탭 = 코드 붙여넣기(+ 언어 셀렉트) / zip 업로드 - 택1. 링크 입력은 탭 밖 공통 필드
-  - 제출 = #18 multipart(`request` JSON 파트 + `file` 파트). 본문 또는 링크 최소 1개 - 비활성 조건을 FE에서도 선반영(서버 400의 사전 차단)
-  - 제출란 아래 내 제출 이력 = #19. 코드 확인은 행 클릭 → #20
-- 과제 목록·상세의 상태 배지 → `AssignmentResponse.myStatus` 그대로 매핑 (이 슬라이스부터 표시 가능 - assignment/fe.md 2절의 보류 해제)
-- 운영진 현황판(`OperatorDashboard` 목데이터) → #22로 교체. `attendance`(출석)는 P2 - 열 제거 또는 비활성
+- 과제 상세(`AssignmentDetailPage`)의 제출란 placeholder → 제출 섹션 3단 (폼 → 내 기록 → 현황판)
+  - 제출 폼: 탭 = 코드 붙여넣기(+ 언어 셀렉트) / zip 업로드 - 택1. 링크 입력은 탭 밖 공통 필드
+  - 제출 = #18 multipart(`request` JSON 파트 + `file` 파트). 본문 또는 링크 최소 1개 - 버튼 비활성으로 선반영(서버 400의 사전 차단), zip·20MB도 클라이언트 선검사
+  - 내 제출 기록 = #19. 코드 확인은 행 펼침 → #20, 파일은 #21 다운로드 anchor
+- 과제 목록·상세의 상태 배지 → `AssignmentResponse.myStatus` 그대로 매핑 (assignment/fe.md 2절의 보류 해제)
+- 현황판 = **과제 상세 안 운영진 섹션** (#22) - 상태/횟수/최근 제출 표
+  - 열람 = `latestSubmissionId`로 최신 제출(대표) 펼침 (#20) - 전체 이력 열람은 P2
+  - 보관 분반에서도 열람 유지: 진입 판정은 `canManage`(ACTIVE 전용)가 아니라 역할(ADMIN 또는 `myRole == OPERATOR`)
+  - 홈 `OperatorDashboard`는 분반 단위 집계(제출률·출석률) 화면이라 P1 API로 채울 수 없음 - 목데이터 유지, P2에서 집계 API와 함께
 - 과제 삭제 확인 창: "제출물 N건이 함께 삭제됩니다" - N = `AssignmentResponse.submissionCount`
-- 제출물 열람(운영진): 현황판 행 → 학생 이력(#20 반복) 또는 최신 제출 상세. 파일은 #21 다운로드 링크
-- `SubmissionsPage`(분반 전체 제출 기록)는 P2 이연 - 채점 결과 열이 본체 (design.md 결정 8). P1은 라우트 미노출
+- `SubmissionsPage`(분반 전체 제출 기록)는 P2 이연 - 채점 결과 열이 본체 (design.md 결정 8). 라우트·사이드바 메뉴 미노출, 학생 홈 "더보기"는 과제 목록으로 연결
 
 ## 2. 표시 규칙
 

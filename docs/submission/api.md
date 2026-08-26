@@ -62,7 +62,7 @@ Submission(제출) = 학생이 과제에 내는 제출물과 그 이력을 다�
   - 형식 검증(서비스): 본문(codeText/file) 둘 다 있으면 400 · 본문·링크 모두 없으면 400 · zip 외 확장자 400 · language는 codeText 있을 때만 의미(파일 제출에 실리면 400)
 - `SubmissionResponse {id, user: UserSummary, codeText, language, fileName, fileSize, linkUrl, submittedAt, late}` - #18·#20 응답. `late` = `submittedAt > dueAt` 서버 판정값
 - `SubmissionSummary {id, language, fileName, fileSize, linkUrl, submittedAt, late}` - #19 목록 응답. codeText 제외(이력 20건 × 코드 전문 수신 방지) - 코드 확인은 #20
-- `StatusBoardRow {user: UserSummary, status, submissionCount, lastSubmittedAt}` - #22 응답. 행 = 현재 STUDENT Enrollment 명단(운영진 먼저 아님 - 이름순), 소속 해제 학생은 제외·데이터는 유지 (schema.md 3절)
+- `StatusBoardRow {user: UserSummary, status, submissionCount, lastSubmittedAt, latestSubmissionId}` - #22 응답. 행 = 현재 STUDENT Enrollment 명단(운영진 먼저 아님 - 이름순), 소속 해제 학생은 제외·데이터는 유지 (schema.md 3절). `latestSubmissionId`(제출 없으면 null) = 운영진이 #20·#21로 진입하는 열람 키 *(2026-08-26 추가, BE PR #15 - FE 연동 중 발견한 계약 누락. "최신 제출 = 대표")*
 
 ## 4. 구현 시 주의 (springdoc에 담기지 않는 내부 규약)
 
