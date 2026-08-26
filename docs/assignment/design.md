@@ -24,6 +24,6 @@
 ## 3. 후속 작업
 
 - [x] BE: 이슈 #10 → `feat/10-assignment-slice` 구현 → PR #11 머지 (2026-08-25, 테스트 90개 통과)
-- [ ] 다음 슬라이스: 제출(Submission) - 제출 API·상태 계산·`AssignmentResponse` 상태 필드 확장·삭제 연쇄(경고 건수 포함)를 `docs/submission/`으로 (문서 구성은 이 폴더 패턴 복제)
+- [x] 다음 슬라이스: 제출(Submission) - `docs/submission/` 설계 확정(2026-08-26) + BE 구현 완료(이슈 #12, PR #13). `AssignmentResponse`에 myStatus·submissionCount 추가, 삭제는 연쇄로 확장 - 결정 1·5의 이월 사항 해소
 - [x] FE: 과제 목록·상세 연동 + 운영진 등록/수정/삭제 폼 - FE 이슈 #11, PR #12 머지 (2026-08-25)
 - [ ] 운영진 드래그 커스텀 정렬 도입 여부 - P2 후보 (2026-08-25 논의, 미확정 - 순서 열·재정렬 API·차시 정렬과의 우선순위 결정 필요)
