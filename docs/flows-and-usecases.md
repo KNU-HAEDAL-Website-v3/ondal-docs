@@ -152,6 +152,7 @@ flowchart LR
 | 10 🔧 | 회원가입 리다이렉션 | 홈페이지 가입 페이지 URL 확정 → 링크 연결 (홈페이지팀 협의 항목에 추가) |
 | 11 ⚖ | 차시 모델링 | **확정(2026-08-25): `assignments.session_no` 선택 정수** - 자유 입력(중복·건너뜀 허용), NULL 허용, 기본 정렬 차시 오름차순. 출석부(P2) 도입 시 Session 엔티티 승격 재검토 ([db/schema.md](db/schema.md) 결정 6). 운영진 드래그 커스텀 정렬은 P2 후보(미확정) |
 | 12 ⚖ | 제출 모델 개정 | **확정(2026-08-26 PM 리뷰): 3종 택1(코드/파일/링크)** - "본문 + 링크 첨부" 폐기(링크가 첨부인지 제출인지 혼란). 링크 1~5개(`submission_links`), 코드 언어 필수, 파일 10MB ([db/schema.md](db/schema.md) 결정 8, [submission/design.md](submission/design.md) 4절) |
+| 13 ⚖ | 문제 번호 | **확정(2026-08-26 PM 리뷰, 상세 2026-08-27): 모든 과제 = 문제, 전역 유일 `problem_no` 1000부터** - 자동(최대+1)/수동 지정, 수정 허용(중복 409). 전용 문제 생성 페이지는 P1 기존 폼 개편으로 갈음, 테스트케이스 입력은 P2 ([db/schema.md](db/schema.md) 결정 9, [assignment/design.md](assignment/design.md) 결정 7) |
 
 ---
 

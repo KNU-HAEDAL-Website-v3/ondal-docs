@@ -1,6 +1,6 @@
 # Ondal P1 DB 스키마 (확정)
 
-> 확정일: 2026-08-19 (PM 결정) · 갱신: 2026-08-27 (제출 모델 3종 택1 개정 - 결정 8) · 기준 코드: BE `main` `5b02be7` (결정 8은 코드 반영 대기 - 슬라이스 1)
+> 확정일: 2026-08-19 (PM 결정) · 갱신: 2026-08-27 (제출 모델 3종 택1 결정 8 + 문제 번호 결정 9) · 기준 코드: BE `main` `b3eb5ea` (결정 8 반영 완료, 결정 9는 코드 반영 대기 - 슬라이스 2)
 > P1 스키마의 단일 출처 - 변경 시 이 문서에 결정 기록 + 코드·ERD(ERDCloud) 동시 갱신
 > P1 바깥(자동 채점, QnA, 공지, 출석부)은 미포함 - 스코프 제외 또는 미결 상태라 지금 그리면 추측이 됨
 
@@ -16,6 +16,7 @@
 | 6 | 차시 = 과제의 선택 번호 | (2026-08-25) `assignments.session_no` 정수. 운영진 자유 입력 - 중복·건너뜀 허용, 차시 밖 과제는 NULL. 목록 기본 정렬 = 차시 오름차순(NULL 마지막) → 등록순. 차시 자체가 속성(날짜·제목)을 갖게 되는 출석부(P2) 도입 시 Session 엔티티 승격 재검토. |
 | 7 | 제출 언어 저장 | (2026-08-25) `submissions.language` - 코드 제출 전용. **2026-08-26 개정: 코드 제출이면 필수** - OJ 채점(P2)의 언어 식별 대비. FILE/LINK 제출은 NULL. 화면 표시·코드 하이라이팅에도 사용. |
 | 8 | 제출 형태 = 3종 택1 | (2026-08-26 PM 리뷰) 코드 / 파일 / 링크 중 하나를 골라 제출 - `submissions.type`(CODE\|FILE\|LINK) 열로 저장(조회 단순·택1 CHECK 강제 가능, 응답 type 필드와 1:1). 링크 제출은 `submission_links`(1:N, **1~5개**, `position` 순서 보존)로 다중 입력. 파일 한도 20MB → **10MB**. 기존 개발 DB는 리셋(볼륨 삭제 후 시더 재생성) - 구 모델 행 마이그레이션 없음(샘플뿐). |
+| 9 | 문제 번호 = 전역 유일, 1000부터 | (2026-08-26 PM 리뷰, 상세 확정 2026-08-27) 모든 과제는 문제(설문형 포함) - `assignments.problem_no` INT **NOT NULL UNIQUE**. 채번: 폼에서 비우면 자동(현재 최대+1, 1000 시작), 직접 입력하면 그 번호(1000 이상, 중복 409). **수정 허용**(중복 409) - P1 내부용이라 오타 정정 유연성 우선, 혼란은 FE 확인 문구로 방어. 개발 DB 리셋(시더가 번호 포함 재생성). |
 
 - 파일 저장: P1은 서버 로컬 디스크
 - S3 등 전환 대비: `stored_path`에 키만 넣으면 되도록 열 설계
@@ -65,15 +66,17 @@ CREATE TABLE enrollments (
 CREATE TABLE assignments (
     id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'PK',
     cohort_id   BIGINT       NOT NULL COMMENT 'FK → cohorts.id - 과제는 분반에 속한다. 조회는 항상 (id, cohort_id) 스코프(다른 반 과제면 404)',
+    problem_no  INT          NOT NULL COMMENT '문제 번호 - 전역 유일, 1000부터 (결정 9). 비우면 자동(최대+1), 직접 지정 가능(1000 이상). 수정 허용, 중복은 409',
     session_no  INT          NULL     COMMENT '차시 번호(선택) - 운영진 자유 입력, 중복·건너뜀 허용. 차시 밖 과제는 NULL. 목록 기본 정렬: 차시 오름차순(NULL 마지막) → 등록순',
     title       VARCHAR(200) NOT NULL COMMENT '과제 제목',
-    description TEXT         NULL     COMMENT '과제 내용 - 문제 링크 포함 자유 텍스트',
+    description TEXT         NULL     COMMENT '과제 내용 - 문제 설명·링크 포함 자유 텍스트',
     due_at      DATETIME(6)  NOT NULL COMMENT '마감 시각(UTC) - 운영진이 생성 시 설정. 마감 후 제출은 지각 표시(차단 아님). 마감을 수정하면 지각 판정도 새 마감 기준으로 다시 계산된다',
     created_at  DATETIME(6)  NOT NULL COMMENT '등록 시각(UTC)',
     PRIMARY KEY (id),
+    UNIQUE KEY uk_assignments_problem_no (problem_no),
     KEY idx_assignments_cohort (cohort_id),
     CONSTRAINT fk_assignments_cohort FOREIGN KEY (cohort_id) REFERENCES cohorts (id)
-) COMMENT='과제 - 등록·수정·삭제는 운영진 이상. 보관 분반에서는 쓰기 409. 삭제는 경고(제출물 N건 함께 삭제) 후 연쇄. 제출 타입 열 없음 - 모든 과제가 코드/zip/링크를 받는다';
+) COMMENT='과제 = 문제 (결정 9 - 전역 유일 번호). 등록·수정·삭제는 운영진 이상. 보관 분반에서는 쓰기 409. 삭제는 경고(제출물 N건 함께 삭제) 후 연쇄. 제출 타입 열 없음 - 모든 과제가 코드/zip/링크를 받는다';
 
 CREATE TABLE submissions (
     id             BIGINT        NOT NULL AUTO_INCREMENT COMMENT 'PK',
@@ -142,7 +145,8 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 - **3종 택1 정합성** (결정 8): 서비스 검증 + DB CHECK 이중 강제 - CHECK는 Flyway 전환 시 추가
   - CODE → `code_text`·`language` NOT NULL, 파일 열·링크 없음 / FILE → `stored_path` NOT NULL / LINK → 링크 1개 이상
   - 링크 1~5개·position 연속성은 서비스 규칙으로만 강제 (자식 테이블 개수 CHECK는 DB로 표현 곤란)
-- **기존 개발 DB는 리셋** (결정 8): 구 모델 행(코드+링크 동시) 마이그레이션 없음 - 볼륨 삭제 후 시더가 새 모델로 재생성
+- **자동 채번 동시성** (결정 9): 서비스는 "현재 최대 problem_no + 1"(없으면 1000)로 채번 - 동시 등록 충돌은 `uk_assignments_problem_no`가 최후 방어(P1 규모에서 재시도 로직은 과함, 발생 시 409로 노출)
+- **기존 개발 DB는 리셋** (결정 8·9): 구 모델 행 마이그레이션 없음 - 볼륨 삭제 후 시더가 새 모델로 재생성
 - 제약 이름: 코드에 실제 명시된 것은 `uk_enrollment_cohort_user`뿐 - 나머지는 현재 Hibernate가 무작위 이름으로 생성, Flyway 전환 시 이 문서의 이름으로 고정
 - `ddl-auto: update`는 열 삭제 미수행 → 기존 개발 DB의 잔여 열은 무시 (운영 전 Flyway로 정리)
 
