@@ -21,6 +21,7 @@
 
 - 상태 배지 색: `SUBMITTED`·`SUBMITTED_EXTRA` = 초록, `LATE` = 주황, `NOT_SUBMITTED` = 회색 (schema.md 결정 2)
 - 제출 형태 표기: `CODE` = 코드 제출, `FILE` = 파일 업로드, `LINK` = 링크 제출 - 서버 `type` 그대로 매핑, 아이콘·라벨은 FE 재량
+- 코드 작성·열람 = CodeMirror 6 (2026-08-27, design.md 결정 17): 폼 코드 탭은 편집 모드, 기록 펼침·현황판 열람은 read-only + 복사 버튼. `language` 값 → 언어 확장 매핑(C/C++→cpp, Java, Python 3, JavaScript/TypeScript), 매핑 없는 값은 하이라이팅 없이 표시
 - `myStatus`·`late`는 서버 판정값 그대로 - dueAt과 submittedAt으로 프론트 재계산 금지 (FE CLAUDE.md 규칙 4)
 - 시각 표시: `submittedAt`·`lastSubmittedAt`(UTC) → KST 변환. "10분 전" 상대 표시는 FE 가공 허용
 - 마감 후에도 제출 버튼 활성 - "지각 제출로 기록됩니다" 확인 안내 후 진행 (flows UC-S4 A1)
