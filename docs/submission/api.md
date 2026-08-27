@@ -10,7 +10,7 @@ Submission(제출) = 학생이 과제에 내는 제출물과 그 이력을 다�
 - 학생: 자기 분반 과제에 제출(재제출 무제한, 이력 append-only)·자기 이력 열람
 - 운영진: 과제별 현황판(제출/미제출/지각)·모든 제출물 열람·파일 다운로드
 - 제출물은 항상 과제(Assignment) 하나에 소속 - 타인 제출물·다른 분반 제출물은 404(존재 비노출)
-- 제출 형식 = 본문(코드 텍스트 또는 zip, 택1) + 링크(선택) - 최소 1개 필요 (schema.md 결정 3)
+- 제출 형태 = 3종 택1 (`type`): CODE 코드 텍스트 / FILE zip 파일(10MB) / LINK 링크 1~5개 (schema.md 결정 8 - 2026-08-27 개정)
 - 상태 4종(미제출/제출/제출(추가)/지각)은 저장하지 않고 이력에서 계산 (schema.md 3절)
 
 ## 2. 엔티티 (DB 스키마)
@@ -22,16 +22,25 @@ Submission(제출) = 학생이 과제에 내는 제출물과 그 이력을 다�
 | id | Long | PK | |
 | assignment | Assignment (N:1, LAZY) | not null | 제출 대상 과제 |
 | user | User (N:1, LAZY) | not null | 제출자 - Enrollment이 아닌 사용자 직접 참조. 소속 해제돼도 제출물은 남는다 (guide 8절 결정 9) |
-| codeText | String | 선택, 최대 100000자 | 본문·코드 - 붙여넣은 코드. 본문은 코드/파일 중 택1(서비스 강제) |
-| language | String | 선택, 최대 30자 | 본문·코드 - 제출 언어(예: Python 3). 표시·하이라이팅용, 채점 무관 |
-| fileName | String | 선택, 최대 255자 | 본문·파일 - 업로드한 zip의 원본 파일명 |
-| storedPath | String | 선택, 최대 500자 | 본문·파일 - 저장 키 `submissions/{UUID}.zip`. P1은 로컬 디스크, S3 전환 시에도 키만 |
-| fileSize | Long | 선택 | 본문·파일 - 크기(byte) |
-| linkUrl | String | 선택, 최대 2048자 | 링크 - GitHub·배포 URL 등 |
+| type | SubmissionType | not null | 제출 형태 `CODE / FILE / LINK` - 3종 택1 (schema.md 결정 8). 형태별 필수 필드는 서비스 검증 |
+| codeText | String | CODE 필수, 최대 100000자 | 붙여넣은 코드 |
+| language | String | CODE 필수, 최대 30자 | 제출 언어(예: Python 3). 하이라이팅 표시 + 채점(P2) 언어 식별 |
+| fileName | String | FILE 전용, 최대 255자 | 업로드한 zip의 원본 파일명 |
+| storedPath | String | FILE 전용, 최대 500자 | 저장 키 `submissions/{UUID}.zip`. P1은 로컬 디스크, S3 전환 시에도 키만 |
+| fileSize | Long | FILE 전용 | 크기(byte) - 한도 10MB |
 | submittedAt | Instant | not null | 제출 시각(UTC) = 서버 수신 시각. dueAt과 비교해 지각 계산 - 지각 플래그 열 없음 |
 | score · mentorComment | Integer · String | P2 준비 | P1에서는 항상 NULL - DTO에 미노출 |
 
-- 수정·삭제 없음(append-only) - 도메인 메서드는 `create`뿐
+테이블 `submission_links` - LINK 제출의 URL 목록 (엔티티 `SubmissionLink`)
+
+| 필드 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | Long | PK | |
+| submission | Submission (N:1, LAZY) | not null | 소속 제출 |
+| url | String | not null, 최대 2048자 | 링크 URL - GitHub·배포 주소 등 |
+| position | Integer | not null | 입력 순서 1~5 - 표시 순서 보존. 개수(1~5)·연속성은 서비스 강제 |
+
+- 수정·삭제 없음(append-only) - 도메인 메서드는 `create`뿐. 링크는 제출과 함께 생성·삭제
 - 상태 enum `SubmissionStatus {NOT_SUBMITTED, SUBMITTED, SUBMITTED_EXTRA, LATE}` - 엔티티 열이 아니라 계산 결과 (schema.md 3절: onTime·late 존재 여부 조합)
 
 ## 3. API 엔드포인트
@@ -56,22 +65,26 @@ Submission(제출) = 학생이 과제에 내는 제출물과 그 이력을 다�
 
 **요청·응답 본문 (record DTO)**
 
-- #18 요청 = `multipart/form-data` 고정 (design.md 결정 2)
-  - `request` 파트(JSON): `SubmissionCreateRequest {codeText?(최대 100000자), language?(최대 30자), linkUrl?(최대 2048자)}`
-  - `file` 파트(선택): zip 1개, 최대 20MB
-  - 형식 검증(서비스): 본문(codeText/file) 둘 다 있으면 400 · 본문·링크 모두 없으면 400 · zip 외 확장자 400 · language는 codeText 있을 때만 의미(파일 제출에 실리면 400)
-- `SubmissionResponse {id, user: UserSummary, codeText, language, fileName, fileSize, linkUrl, submittedAt, late}` - #18·#20 응답. `late` = `submittedAt > dueAt` 서버 판정값
-- `SubmissionSummary {id, language, fileName, fileSize, linkUrl, submittedAt, late}` - #19 목록 응답. codeText 제외(이력 20건 × 코드 전문 수신 방지) - 코드 확인은 #20
+- #18 요청 = `multipart/form-data` 고정 (design.md 결정 2 - 전송 방식 유지, 검증 규칙은 결정 12로 개정)
+  - `request` 파트(JSON): `SubmissionCreateRequest {type(CODE|FILE|LINK), codeText?(최대 100000자), language?(최대 30자), linkUrls?(문자열 배열, 각 최대 2048자)}`
+  - `file` 파트(FILE일 때 필수): zip 1개, 최대 10MB
+  - 형식 검증(서비스) - type별 필수·금지, 위반은 400:
+    - CODE → codeText·language 필수 / file 파트·linkUrls 금지
+    - FILE → file 파트 필수(zip 확장자·10MB) / codeText·language·linkUrls 금지
+    - LINK → linkUrls 1~5개 필수(빈 문자열 불가) / codeText·language·file 파트 금지
+- `SubmissionResponse {id, user: UserSummary, type, codeText, language, fileName, fileSize, links: string[], submittedAt, late}` - #18·#20 응답. `late` = `submittedAt > dueAt` 서버 판정값. `links`는 position 순 URL 배열(LINK 외에는 빈 배열)
+- `SubmissionSummary {id, type, language, fileName, fileSize, links: string[], submittedAt, late}` - #19 목록 응답. codeText 제외(이력 20건 × 코드 전문 수신 방지) - 코드 확인은 #20
 - `StatusBoardRow {user: UserSummary, status, submissionCount, lastSubmittedAt, latestSubmissionId}` - #22 응답. 행 = 현재 STUDENT Enrollment 명단(운영진 먼저 아님 - 이름순), 소속 해제 학생은 제외·데이터는 유지 (schema.md 3절). `latestSubmissionId`(제출 없으면 null) = 운영진이 #20·#21로 진입하는 열람 키 *(2026-08-26 추가, BE PR #15 - FE 연동 중 발견한 계약 누락. "최신 제출 = 대표")*
 
 ## 4. 구현 시 주의 (springdoc에 담기지 않는 내부 규약)
 
 - 스코프 조회는 체인 전부: assignment는 `findByIdAndCohortId`, submission은 `findByIdAndAssignmentId` - 손자 리소스라 두 단계 모두 필수 (guide 4절)
 - #18은 서비스 첫 줄 `cohort.ensureActive()` - 보관 분반 409. #19~#22는 조회라 보관 분반에서도 200 (열람 유지)
-- 파일 저장 순서: 검증 → 디스크 저장 → DB insert. DB 실패 시 저장한 파일 삭제 시도(고아 파일 방지). 삭제 연쇄는 역순 - 파일 먼저 지워야 RESTRICT 안전망이 성립 (schema.md 4절)
+- 파일 저장 순서: 검증 → 디스크 저장 → DB insert. DB 실패 시 저장한 파일 삭제 시도(고아 파일 방지). 삭제 연쇄는 역순: 파일 → submission_links → submissions - 파일 먼저 지워야 RESTRICT 안전망이 성립 (schema.md 4절)
 - 저장 루트는 `ondal.upload.dir` 프로퍼티 - 테스트는 `@TempDir` 주입, local 기본값 `./uploads`
 - #21은 `ResponseEntity<Resource>` 반환 - "ResponseEntity 금지" 규약(guide 4절)의 명시적 예외(바이너리 + Content-Disposition 헤더 필요). 파일명은 RFC 5987 인코딩(한글 파일명)
 - 상태 계산은 `SubmissionStatus.of(onTime, late)` 정적 메서드 한 곳 - Assembler(#13·#14)와 현황판(#22)이 공용
 - #22 쿼리: 과제의 전체 제출 1회 조회 후 서비스에서 사용자별 그룹핑 (P1 규모, N+1 금지). `idx_submissions_assignment_user` 활용
-- multipart 한도는 application.yml `spring.servlet.multipart.max-file-size: 20MB` + 서비스 이중 확인 - Spring 한도 초과는 400 INVALID_INPUT으로 변환(전역 핸들러에 `MaxUploadSizeExceededException` 추가)
+- multipart 한도는 application.yml `spring.servlet.multipart.max-file-size: 10MB`(+ max-request-size 15MB) + 서비스 이중 확인 - Spring 한도 초과는 400 INVALID_INPUT으로 변환(전역 핸들러에 `MaxUploadSizeExceededException` 추가). 20MB → 10MB는 design.md 결정 14
+- 시더(LocalDataSeeder)는 새 모델로 재작성: type 지정, LINK 제출은 submission_links로, 코드 제출 language 필수. 데모 문구는 자체 문제 서술(design.md 결정 16 - "백준 N번" 지시 제거)
 - springdoc: `@Tag("Submission")` + `@Operation(summary)` 최소한만. `late`·`myStatus` 판정 규칙은 `@Schema(description)`에 명시
