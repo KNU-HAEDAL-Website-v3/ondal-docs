@@ -1,8 +1,8 @@
 # Ondal P1 DB 스키마 (확정)
 
-> 확정일: 2026-08-19 (PM 결정) · 갱신: 2026-08-27 (제출 모델 3종 택1 결정 8 + 문제 번호 결정 9) · 기준 코드: BE `main` `b3eb5ea` (결정 8 반영 완료, 결정 9는 코드 반영 대기 - 슬라이스 2)
+> 확정일: 2026-08-19 (PM 결정) · 갱신: 2026-09-09 (Q&A 질문 글 결정 10) · 기준 코드: BE `main` `56bc004` (결정 8·9·10 반영 완료)
 > P1 스키마의 단일 출처 - 변경 시 이 문서에 결정 기록 + 코드·ERD(ERDCloud) 동시 갱신
-> P1 바깥(자동 채점, QnA, 공지, 출석부)은 미포함 - 스코프 제외 또는 미결 상태라 지금 그리면 추측이 됨
+> P1 바깥(자동 채점, 공지, 출석부)은 미포함 - 스코프 제외 또는 미결 상태라 지금 그리면 추측이 됨. Q&A 질문 글은 2026-09-09 결정 10으로 편입(답변·알림은 여전히 바깥)
 
 ## 1. 확정 결정
 
@@ -17,6 +17,7 @@
 | 7 | 제출 언어 저장 | (2026-08-25) `submissions.language` - 코드 제출 전용. **2026-08-26 개정: 코드 제출이면 필수** - OJ 채점(P2)의 언어 식별 대비. FILE/LINK 제출은 NULL. 화면 표시·코드 하이라이팅에도 사용. |
 | 8 | 제출 형태 = 3종 택1 | (2026-08-26 PM 리뷰) 코드 / 파일 / 링크 중 하나를 골라 제출 - `submissions.type`(CODE\|FILE\|LINK) 열로 저장(조회 단순·택1 CHECK 강제 가능, 응답 type 필드와 1:1). 링크 제출은 `submission_links`(1:N, **1~5개**, `position` 순서 보존)로 다중 입력. 파일 한도 20MB → **10MB**. 기존 개발 DB는 리셋(볼륨 삭제 후 시더 재생성) - 구 모델 행 마이그레이션 없음(샘플뿐). |
 | 9 | 문제 번호 = 전역 유일, 1000부터 | (2026-08-26 PM 리뷰, 상세 확정 2026-08-27) 모든 과제는 문제(설문형 포함) - `assignments.problem_no` INT **NOT NULL UNIQUE**. 채번: 폼에서 비우면 자동(현재 최대+1, 1000 시작), 직접 입력하면 그 번호(1000 이상, 중복 409). **수정 허용**(중복 409) - P1 내부용이라 오타 정정 유연성 우선, 혼란은 FE 확인 문구로 방어. 개발 DB 리셋(시더가 번호 포함 재생성). |
+| 10 | Q&A 질문 글 = 분반 게시글 | (2026-09-09, decisions/6) `questions` - 분반 스코프(`cohort_id`), 작성자 FK(`author_id`), `title` 200자·`content` TEXT 둘 다 필수, 수정 시각 열 없음. 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상(서비스 403). 답변(댓글)·알림은 백로그 - 자식 테이블 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. `ddl-auto: update`가 테이블을 추가하므로 개발 DB 리셋 불필요. |
 
 - 파일 저장: P1은 서버 로컬 디스크
 - S3 등 전환 대비: `stored_path`에 키만 넣으면 되도록 열 설계
@@ -28,7 +29,7 @@
 
 ```sql
 -- =========================================================================
--- Ondal P1 DB 스키마 - 확정본 2026-08-19 · 갱신 2026-08-27 (docs/db/schema.md)
+-- Ondal P1 DB 스키마 - 확정본 2026-08-19 · 갱신 2026-09-09 (docs/db/schema.md)
 -- ERDCloud 가져오기용 MySQL 문법. 실제 DB는 PostgreSQL 16.
 -- =========================================================================
 
@@ -107,6 +108,20 @@ CREATE TABLE submission_links (
     KEY idx_submission_links_submission (submission_id),
     CONSTRAINT fk_submission_links_submission FOREIGN KEY (submission_id) REFERENCES submissions (id)
 ) COMMENT='제출 링크 - LINK 제출의 URL 1~5개. 제출과 함께 append-only, 개수·순서는 서비스 강제';
+
+CREATE TABLE questions (
+    id         BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    cohort_id  BIGINT       NOT NULL COMMENT 'FK → cohorts.id - 질문은 분반에 속한다. 조회는 항상 (id, cohort_id) 스코프(다른 반 글이면 404)',
+    author_id  BIGINT       NOT NULL COMMENT 'FK → users.id - 작성자. 등록 시 요청자 본인으로 고정, 변경 없음. 소속이 해제돼도 글은 남는다',
+    title      VARCHAR(200) NOT NULL COMMENT '질문 제목',
+    content    TEXT         NOT NULL COMMENT '질문 내용 - 자유 텍스트(최대 10000자, 서비스 검증)',
+    created_at DATETIME(6)  NOT NULL COMMENT '등록 시각(UTC). 수정 시각 열 없음 (qna/design.md 결정 6)',
+    PRIMARY KEY (id),
+    KEY idx_questions_cohort_created (cohort_id, created_at),
+    KEY idx_questions_author (author_id),
+    CONSTRAINT fk_questions_cohort FOREIGN KEY (cohort_id) REFERENCES cohorts (id),
+    CONSTRAINT fk_questions_author FOREIGN KEY (author_id) REFERENCES users (id)
+) COMMENT='Q&A 질문 글 (결정 10) - 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상. 보관 분반에서는 쓰기 409. 답변 테이블은 후속(백로그)';
 ```
 
 ## 3. 계산 규칙 (열로 저장하지 않는 것)
@@ -139,9 +154,9 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 
 - **연쇄 삭제 주체 = 서비스 (DB 아님)**
   - 이유: zip 파일이 DB 밖(디스크)에 있어 DB `ON DELETE CASCADE`만으로는 파일이 잔존
-  - FK는 기본(RESTRICT)으로 유지, 서비스가 파일 → submission_links → submissions → assignments → enrollments → cohort 순서로 삭제
+  - FK는 기본(RESTRICT)으로 유지, 서비스가 파일 → submission_links → submissions → assignments → questions → enrollments → cohort 순서로 삭제
   - RESTRICT = 삭제 순서 누락 시 에러로 알려 주는 안전망
-- **PostgreSQL은 FK 인덱스 자동 생성 없음** (MySQL과 다름) → `idx_assignments_cohort`, `idx_submissions_*`, `idx_submission_links_submission`은 엔티티에 `@Table(indexes = ...)`로 명시
+- **PostgreSQL은 FK 인덱스 자동 생성 없음** (MySQL과 다름) → `idx_assignments_cohort`, `idx_submissions_*`, `idx_submission_links_submission`, `idx_questions_*`은 엔티티에 `@Table(indexes = ...)`로 명시
 - **3종 택1 정합성** (결정 8): 서비스 검증 + DB CHECK 이중 강제 - CHECK는 Flyway 전환 시 추가
   - CODE → `code_text`·`language` NOT NULL, 파일 열·링크 없음 / FILE → `stored_path` NOT NULL / LINK → 링크 1개 이상
   - 링크 1~5개·position 연속성은 서비스 규칙으로만 강제 (자식 테이블 개수 CHECK는 DB로 표현 곤란)
