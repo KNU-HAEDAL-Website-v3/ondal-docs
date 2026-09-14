@@ -42,6 +42,7 @@
 | 5 | [guide/](docs/guide/) | BE 공통 규약(design.md) + 온보딩 안내서(1st guide) |
 | 6 | [enrollment/](docs/enrollment/) · [assignment/](docs/assignment/) · [submission/](docs/submission/) · [qna/](docs/qna/) · [notice/](docs/notice/) · [attendance/](docs/attendance/) | 도메인별 설계·API 명세 |
 | 7 | [decisions/](docs/decisions/) | 의사결정 기록 - 왜 이렇게 만들었는가 |
+| 8 | [test-week-checklist.md](docs/test-week-checklist.md) | 테스트 주간(9/19~25) 운영 서버 점검 체크리스트 - 역할별 항목, 문제 보고 형식 |
 
 - [기여 가이드](CONTRIBUTING.md) - 기여 방법, 문서 작성 규칙
 - [행동 강령](CODE_OF_CONDUCT.md)
