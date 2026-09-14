@@ -18,6 +18,7 @@
 | 8 | 제출 형태 = 3종 택1 | (2026-08-26 PM 리뷰) 코드 / 파일 / 링크 중 하나를 골라 제출 - `submissions.type`(CODE\|FILE\|LINK) 열로 저장(조회 단순·택1 CHECK 강제 가능, 응답 type 필드와 1:1). 링크 제출은 `submission_links`(1:N, **1~5개**, `position` 순서 보존)로 다중 입력. 파일 한도 20MB → **10MB**. 기존 개발 DB는 리셋(볼륨 삭제 후 시더 재생성) - 구 모델 행 마이그레이션 없음(샘플뿐). |
 | 9 | 문제 번호 = 전역 유일, 1000부터 | (2026-08-26 PM 리뷰, 상세 확정 2026-08-27) 모든 과제는 문제(설문형 포함) - `assignments.problem_no` INT **NOT NULL UNIQUE**. 채번: 폼에서 비우면 자동(현재 최대+1, 1000 시작), 직접 입력하면 그 번호(1000 이상, 중복 409). **수정 허용**(중복 409) - P1 내부용이라 오타 정정 유연성 우선, 혼란은 FE 확인 문구로 방어. 개발 DB 리셋(시더가 번호 포함 재생성). |
 | 10 | Q&A 질문 글 = 분반 게시글 | (2026-09-09, decisions/6) `questions` - 분반 스코프(`cohort_id`), 작성자 FK(`author_id`), `title` 200자·`content` TEXT 둘 다 필수, 수정 시각 열 없음. 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상(서비스 403). 답변(댓글)·알림은 백로그 - 자식 테이블 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. `ddl-auto: update`가 테이블을 추가하므로 개발 DB 리셋 불필요. |
+| 12 | 차시 = Session 엔티티(부분 승격), 출석 = (차시, 수강생) 기록 | (2026-09-14, P2 - attendance/design.md) `sessions(cohort_id, session_no 유일, title, held_on DATE)` + `attendances((session_id, user_id) 유일, status PRESENT/LATE/ABSENT, checked_at, checked_by)`. **`assignments.session_no` 는 정수 유지(FK 없음)** - P1 과제 슬라이스를 흔들지 않음, 같은 번호 체계로 느슨히 대응(결정 6 재검토 결과). 미확인 = 행 없음. 출석률은 서버 계산(출석 ÷ 판정). 차시 삭제 시 기록 서비스 연쇄. Flyway `V3__attendance.sql`. |
 | 11 | 공지 = 한 테이블, NULL 분반 = 전체 공지 | (2026-09-14, P2 첫 항목 - notice/design.md) `notices` - `cohort_id` **NULL 허용**(NULL = 전체 공지, 값 = 분반 공지), 작성자 FK, `title` 200자·`content` TEXT 필수, `pinned`(필독, 기본 false), 수정 시각 열 없음. 쓰기 권한은 작성자 무관 "관리 권한"(전체: ADMIN / 분반: 운영진 이상). 예약·숨김 상태 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. Flyway `V2__notices.sql` 로 추가(운영 DB 리셋 없음). |
 
 - 파일 저장: P1은 서버 로컬 디스크
@@ -138,6 +139,34 @@ CREATE TABLE notices (
     CONSTRAINT fk_notices_cohort FOREIGN KEY (cohort_id) REFERENCES cohorts (id),
     CONSTRAINT fk_notices_author FOREIGN KEY (author_id) REFERENCES users (id)
 ) COMMENT='공지사항 (결정 11) - 전체 공지는 관리자, 분반 공지는 운영진 이상이 등록·수정·삭제(작성자 무관). 보관 분반 공지는 열람 유지·쓰기 409. Flyway V2';
+
+CREATE TABLE sessions (
+    id         BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    cohort_id  BIGINT       NOT NULL COMMENT 'FK → cohorts.id',
+    session_no INT          NOT NULL COMMENT '차시 번호 - 분반 안 유일. 등록 시 생략하면 최대 + 1. assignments.session_no 와 같은 번호 체계(FK 없음)',
+    title      VARCHAR(100) NULL COMMENT '차시 제목 (선택)',
+    held_on    DATE         NOT NULL COMMENT '수업 날짜 - KST 달력일. 유일하게 DATE 타입인 열 (attendance/design.md 결정 8)',
+    created_at DATETIME(6)  NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_sessions_cohort_no (cohort_id, session_no),
+    KEY idx_sessions_cohort_held (cohort_id, held_on),
+    CONSTRAINT fk_sessions_cohort FOREIGN KEY (cohort_id) REFERENCES cohorts (id)
+) COMMENT='차시(수업 회차) (결정 12) - 출석 기록의 단위. 운영진이 등록·수정·삭제(삭제 시 기록 서비스 연쇄). Flyway V3';
+
+CREATE TABLE attendances (
+    id         BIGINT      NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    session_id BIGINT      NOT NULL COMMENT 'FK → sessions.id',
+    user_id    BIGINT      NOT NULL COMMENT 'FK → users.id - 수강생. (session_id, user_id) 유일. 기록이 없으면 미확인',
+    status     VARCHAR(20) NOT NULL COMMENT 'PRESENT / LATE / ABSENT',
+    checked_at DATETIME(6) NOT NULL COMMENT '표시(마지막 변경) 시각',
+    checked_by BIGINT      NOT NULL COMMENT 'FK → users.id - 표시한 운영진',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_attendances_session_user (session_id, user_id),
+    KEY idx_attendances_user (user_id),
+    CONSTRAINT fk_attendances_session FOREIGN KEY (session_id) REFERENCES sessions (id),
+    CONSTRAINT fk_attendances_user FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT fk_attendances_checked_by FOREIGN KEY (checked_by) REFERENCES users (id)
+) COMMENT='출석 기록 (결정 12) - 운영진이 차시 단위 일괄 upsert. 출석률(출석 ÷ 판정)은 저장하지 않고 서버가 계산. Flyway V3';
 ```
 
 ## 3. 계산 규칙 (열로 저장하지 않는 것)
@@ -187,7 +216,7 @@ P2·P3에서 추가 예정 (지금은 그리지 않음 - 결정 시 이 문서�
 - OJ 문제 확장: assignments의 `cohort_id` NULL 허용 전환 + 난이도·정답률 열 (P3 - "OJ 문제 = 분반 없는 과제" 원칙, 별도 problems 테이블 없음. 난이도는 티어 시스템의 입력값)
 - 문제 태그: `tags` + 문제-태그 N:M 조인 테이블 (P3 - 관리자 큐레이션 고정 목록, 자유 입력 금지. 탐색 필터·태그별 실력 분석용, 2026-08-25 구상)
 - xp_events 테이블: 경험치 획득 이력 (P3 티어 - mvp-scope 5절 구상 메모)
-- attendance(출석)·Session 엔티티: 출석부 P2 이월 확정(2026-08-25) - 도입 시 `assignments.session_no`를 Session FK로 승격 재검토
+- ~~attendance(출석)·Session 엔티티: 출석부 P2~~ → 2026-09-14 결정 12 로 추가됨 (Flyway V3). `assignments.session_no` 의 FK 승격은 하지 않음(부분 승격) - 재검토 조건은 attendance/design.md 3절
 - ~~notices 테이블: 공지사항 P2~~ → 2026-09-14 결정 11 로 추가됨 (Flyway V2)
 
 ## 5. 관련 문서
