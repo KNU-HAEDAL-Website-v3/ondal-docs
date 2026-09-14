@@ -20,7 +20,7 @@
 | Docker | 29.8.0 · Compose v5.5.1 | OK |
 | 기존 서비스 | 0-infra(nginx·cloudflared) · 1-auth(Keycloak) · 2-home · 3-ondal(ondal-be·ondal-db) · 4-rental | 재부팅·커널 파라미터 변경은 전부에 영향 |
 
-## 3. 결정 대기 - Judge0 1.13.1 은 이 서버 커널에서 그대로 돌지 않는다
+## 3. 결정 - Judge0 1.13.1 은 이 서버 커널에서 그대로 돌지 않는다 → **A 채택(2026-09-14 PM), VM 설치 완료(8절)**
 
 - 사실
   - Judge0 1.13.1(2024-04, 마지막 릴리스)의 샌드박스 isolate 1.8.1 은 **cgroup v1 memory 컨트롤러**(`/sys/fs/cgroup/memory/box-N`)를 요구. 공식 배포 문서도 Ubuntu 22.04 에 `systemd.unified_cgroup_hierarchy=0` GRUB 설정을 요구
@@ -36,10 +36,10 @@
 | 격리 | VM 경계 + isolate - 가장 강함 | isolate 2.6 | Docker 격리만(`--network none`, 자원 제한) |
 | 착수 소요 | PM 1~2시간(4절) | PM+Claude 반나절~, 실패 가능 | Claude 1~2일 |
 
-- **권고 = A** - 이번 주 목표와 "Judge0 확정" 결정을 동시에 지키는 유일한 길. B 는 A 가 막힐 때(예: snap·KVM 사용 불가) 파일럿, C 는 최후 대안. BE·FE 는 어느 쪽이든 `JudgeEngine` 뒤에서 같다(A·B 는 같은 Judge0 API → `Judge0Engine` 그대로)
-- 이 결정은 PM 몫 - 서버 관리자 판단(VM 운영 의사·자원)이 필요. 결정 전까지 BE·FE 는 `FakeJudgeEngine` 으로 개발·검증 진행
+- **A 채택 (2026-09-14 PM 결정)** - 릴리스를 그대로 쓰고 호스트 커널·GRUB 을 건드리지 않는 유일한 길. B 는 A 가 막힐 때 파일럿, C 는 최후 대안. BE·FE 는 어느 쪽이든 `JudgeEngine` 뒤에서 같다(A·B 는 같은 Judge0 API → `Judge0Engine` 그대로)
+- 설치 결과는 8절. 4절은 그 절차의 원본(재설치·이전 시 그대로 따른다)
 
-## 4. 권고안 A 절차 (PM 실행, 전부 sudo)
+## 4. A 절차 (2026-09-14 실행 완료 - 재설치·이전용 원본)
 
 1. 호스트에 multipass: `sudo snap install multipass` → `multipass launch 22.04 --name judge0 --cpus 2 --memory 2G --disk 25G` → `multipass shell judge0`
 2. VM 안 (Ubuntu 22.04 - cgroup v1 memory 컨트롤러 있음)
@@ -93,3 +93,27 @@ curl -s "$J/submissions/$TOKEN_ID?base64_encoded=true&fields=status,stdout,time,
 - 백업 불필요: Judge0 DB 는 실행 캐시일 뿐, 판정·케이스는 Ondal DB(`test_cases`·`judge_results`)에 있음. 재설치 = 5분
 - 용량: Judge0 이미지 약 20GB(컴파일러 전부 포함) - VM 디스크 25GB 로 시작, `docker system df` 로 확인
 - 보안: 2358 은 VM 내부 브리지에만 - 호스트 방화벽에서 외부 → 10.x 차단 확인. 토큰은 `.env`·`judge0.conf` 두 곳, 레포에 올리지 않음(`judge0.conf` gitignore)
+
+## 8. 설치 기록 (2026-09-14)
+
+- VM `judge0` (multipass 1.16.4, snap): Ubuntu 22.04 LTS, 커널 5.15, **2 vCPU · 메모리 2.9GB · 디스크 29GB**, IP `10.251.81.119`(mpqemubr0 내부 브리지 - 외부 노출 없음)
+  - cgroup v1 전환 확인: `/proc/cmdline` 에 `systemd.unified_cgroup_hierarchy=0`, `/sys/fs/cgroup` = tmpfs, `/sys/fs/cgroup/memory` 존재
+  - Docker 29.8.0 · Compose v5.5.1, `ubuntu` 사용자 docker 그룹
+- Judge0 CE 1.13.1 기동: `judge0-server`(2358) · `judge0-workers` · `judge0-db`(postgres 13) · `judge0-redis`(6) 전부 running
+  - 파일: `~/judge0/{docker-compose.yml, judge0.conf.example, judge0.conf}` - 앞의 둘은 레포 `ondal-BE/infra/judge0/` 사본, `judge0.conf` 는 VM 에만(600, 비밀값 4개는 `openssl rand` 생성)
+  - 이미지 14.2GB + DB·Redis → 디스크 **17GB/29GB 사용(56%)**. 디스크가 이 VM 의 유일한 여유 제약
+- 스모크 통과: A+B(C, language_id 50) 제출 → `status.id 3 Accepted`, stdout `3`, time 0.002s, memory 11MB. **isolate 샌드박스가 cgroup 오류 없이 동작** = A 안의 전제 확인
+- 접근 통제 확인: 토큰 없는 `GET /languages` → **401**. 호스트에서 `http://10.251.81.119:2358` 도달 가능(401), 인터넷·nginx 미노출
+- BE 연결: `/opt/haedal/3-haedal-ondal/ondal-BE/.env` 에 `ONDAL_JUDGE_ENGINE=judge0` · `JUDGE0_URL=http://10.251.81.119:2358` · `JUDGE0_TOKEN=<judge0.conf 의 AUTHN_TOKEN>` 추가 (`.env.bak-20260914` 백업). **적용은 컨테이너 재기동 1회** - `cd /opt/haedal/3-haedal-ondal/ondal-BE && sudo docker compose up -d`
+  - 기동 확인: `sudo docker compose logs ondal-be | grep judge` → `[judge] Judge0 연결 확인 OK - N 언어 사용 가능`. 연결 실패·토큰 오류도 같은 접두사로 한 줄씩 남는다(BE PR #42)
+  - 사전 검증(로컬): `ondal.judge.engine=judge0` + 잘못된 주소로 기동해도 앱은 정상 기동하고 WARN 만 남김 - 채점 엔진이 BE 가용성을 좌우하지 않음
+
+## 9. 운영 점검
+
+| 언제 | 명령 | 기대 |
+|---|---|---|
+| 호스트 재부팅 후 | `multipass list` | `judge0  Running  10.251.81.119` - **Stopped 면 `multipass start judge0`** (multipass 는 자동 시작을 보장하지 않는다) |
+| IP 가 바뀌었을 때 | `multipass info judge0` → `.env` 의 `JUDGE0_URL` 갱신 → `sudo docker compose up -d` | BE 로그 `[judge] Judge0 연결 확인 OK` |
+| 채점이 계속 "채점 중" | `sudo docker compose logs --tail=50 ondal-be \| grep judge` | 연결 실패면 VM·IP·라우팅, 401 이면 토큰 |
+| 엔진 쪽 이상 | `multipass exec judge0 -- docker compose -f ~/judge0/docker-compose.yml logs --tail=50 workers` | `Failed to create control group` = cgroup 이상(VM 재부팅 후 GRUB 확인) |
+| 디스크 | `multipass exec judge0 -- df -h /` | 29GB 중 17GB 사용 - 80% 넘으면 `docker system prune` |

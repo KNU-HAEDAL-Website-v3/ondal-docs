@@ -37,7 +37,7 @@
 ## 3. 후속 작업
 
 - [x] docs: judge/{design,api,fe,test,infra}.md (2026-09-14)
-- [ ] 서버: Judge0 연결 - infra.md 3절 선택지(권고 A: Ubuntu 22.04 VM) PM 결정 → 4절 절차 → 스모크 → BE .env `ONDAL_JUDGE_ENGINE=judge0` + 재빌드 (**PM = 서버 관리자, sudo 필요**). 그 전까지 운영은 engine=off(출제·저장 가능, 제출은 채점 대기)
+- [x] 서버: **A 채택·설치 완료 (2026-09-14)** - multipass VM `judge0`(Ubuntu 22.04, cgroup v1) 안에 Judge0 1.13.1 기동, 스모크 Accepted, `.env` 에 엔진 3키 기록 - infra.md 8절. **남은 것 = 컨테이너 재기동 1회(sudo)** 로 `engine=off → judge0` 적용
 - [x] infra: ondal-BE `infra/judge0/`(compose·judge0.conf.example·README) - PR #40 머지 (2026-09-14)
 - [x] BE: Flyway V6 + `judge` 슬라이스 + API #47~#51 + 응답 확장 - ondal-BE 이슈 #39 → PR #41 머지 (2026-09-14, JudgeApiTest 8·OutputComparatorTest 2·Judge0EngineTest 4 포함 전체 209건 통과). 서버 레포 pull 완료, **컨테이너 재빌드 대기(V4~V6)**
 - [x] FE: 출제 섹션·학생 예시·채점 결과·현황판 판정·폴링 - ondal-FE 이슈 #41 → PR #42 (2026-09-14, 헤드리스 21건 mock·실 BE 통과). 서버 재빌드 후 #36 → #38 → #42 순서로 머지
