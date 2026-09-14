@@ -2,7 +2,7 @@
 
 > 역할: FE 작업자용 - 공지 API와 화면의 매핑, 표시 규칙
 > 명세: [api.md](api.md) - 계약의 원본은 springdoc `Notice` 태그 · FE 공통 규칙: ondal-FE `CLAUDE.md`
-> 상태: 견본 화면(피그마 2:37234, `StudentNoticesView`·`OperatorNoticesView`)을 실 API 로 교체 - 2026-09-14 진행
+> 상태: 구현 완료 (2026-09-14, ondal-FE PR #30 머지·운영 배포) - 견본 화면(피그마 2:37234, `StudentNoticesView`·`OperatorNoticesView`)을 아래 매핑대로 교체·삭제
 
 ## 1. 화면 매핑
 
