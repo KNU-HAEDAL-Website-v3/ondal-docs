@@ -46,6 +46,23 @@ Question(질문 글) = 분반 소속자가 자기 분반 게시판에 올리는 
   - `canEdit`: 작성자 본인 && 분반 ACTIVE / `canDelete`: (작성자 본인 || 운영진 이상) && 분반 ACTIVE - 프론트는 이 값만 보고 버튼 분기
 - 등록·수정 요청은 `QuestionCreateRequest` / `QuestionUpdateRequest` - 필드·검증 동일: `title`(필수, 최대 200자), `content`(필수, 최대 10000자)
 
+## 5. 답변 API (2026-09-14 편입 - design.md 결정 11)
+
+테이블 `answers` · 엔티티 `Answer {id, question(N:1), author(N:1), content(10000자 필수), createdAt}` (Flyway `V4__answers.sql`)
+
+| # | 기능 | 메서드 · 경로 | 권한 | 성공 | 주요 실패 |
+|---|---|---|---|---|---|
+| 41 | 답변 목록 | `GET /api/cohorts/{cohortId}/questions/{questionId}/answers` | 분반 소속 누구나 | 200 목록(오래된 순) | 403, 404(분반·질문) |
+| 42 | 답변 등록 | `POST …/answers` | 분반 소속 누구나 | 201 + Location | 400, 403, 404, 409(보관) |
+| 43 | 답변 수정 | `PUT …/answers/{answerId}` | 작성자 본인 | 200 | 400, 403(남의 답변), 404(질문·답변·교차), 409(보관) |
+| 44 | 답변 삭제 | `DELETE …/answers/{answerId}` | 작성자 본인 또는 운영진 이상 | 204 | 403, 404, 409(보관) |
+
+- 응답 `AnswerResponse {id, content, author{id, name, title}, createdAt, canEdit, canDelete}` - 질문과 같은 규칙(작성자 && ACTIVE / 작성자 또는 운영진 이상 && ACTIVE)
+- 요청 `AnswerCreateRequest` / `AnswerUpdateRequest {content}` - 필수, 10000자
+- `QuestionResponse` 에 `answerCount` 추가(필드 추가만) - 분반 단위 집계 `AnswerRepository.countByCohortIdGroupByQuestion` 1회
+- 스코프 조회 체인: 분반 → `findByIdAndCohortIdWithAuthor(질문)` → `findByIdAndQuestionIdWithAuthor(답변)` - 불일치·부재 404
+- 질문 삭제(#27) 시 `deleteAllByQuestionId` 서비스 연쇄
+
 ## 4. 구현 시 주의 (springdoc에 담기지 않는 내부 규약)
 
 - 스코프 조회: 하위 id는 반드시 `findByIdAndCohortIdWithAuthor(id, cohortId)` - `findById` 단독 호출 금지, 불일치는 404(존재 비노출)

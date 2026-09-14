@@ -28,6 +28,15 @@
   - POST·PUT·DELETE → 409 COHORT_ARCHIVED / restore 후 POST → 201
 - 동작 확인
   - POST 응답 Location 헤더 + 본문 id·author(name, title="일반 수강생", loginId 없음)·canEdit·canDelete true
+
+## 3. 답변 (`qna/AnswerApiTest`, 2026-09-14 - 6건 통과, 전체 193건)
+
+- 미로그인 401 / 비소속 GET·POST 403
+- 소속 누구나 등록(201, Location, 직책, loginId 없음, canEdit·canDelete) → 목록 오래된 순, 질문자는 남의 답변 canEdit·canDelete false → 질문 단건·목록 `answerCount`
+- 수정: 질문자·운영진·관리자 → 403, 작성자 → 200 / 삭제: 다른 수강생 403, 작성자·운영진·관리자 204
+- 교차 질문의 답변 PUT·DELETE → 404, 없는 질문 404, 빈 내용 400
+- 질문 삭제 → 답변 연쇄 삭제(리포지토리 count 0)
+- 보관 분반: 목록 200(canDelete false), POST·DELETE 409, 해제 후 204
   - 작성자 직책은 분반 역할을 따른다 (OPERATOR → "교육운영진")
   - canEdit/canDelete 매트릭스: 작성자 true/true · 다른 수강생 false/false · 운영진 false/true · 관리자 false/true
   - PUT 수정은 재조회로 flush 확인 / 목록 최신순 / 빈 목록 `[]` / 삭제 후 목록에서 사라지고 단건 404

@@ -18,6 +18,7 @@
 | 8 | 제출 형태 = 3종 택1 | (2026-08-26 PM 리뷰) 코드 / 파일 / 링크 중 하나를 골라 제출 - `submissions.type`(CODE\|FILE\|LINK) 열로 저장(조회 단순·택1 CHECK 강제 가능, 응답 type 필드와 1:1). 링크 제출은 `submission_links`(1:N, **1~5개**, `position` 순서 보존)로 다중 입력. 파일 한도 20MB → **10MB**. 기존 개발 DB는 리셋(볼륨 삭제 후 시더 재생성) - 구 모델 행 마이그레이션 없음(샘플뿐). |
 | 9 | 문제 번호 = 전역 유일, 1000부터 | (2026-08-26 PM 리뷰, 상세 확정 2026-08-27) 모든 과제는 문제(설문형 포함) - `assignments.problem_no` INT **NOT NULL UNIQUE**. 채번: 폼에서 비우면 자동(현재 최대+1, 1000 시작), 직접 입력하면 그 번호(1000 이상, 중복 409). **수정 허용**(중복 409) - P1 내부용이라 오타 정정 유연성 우선, 혼란은 FE 확인 문구로 방어. 개발 DB 리셋(시더가 번호 포함 재생성). |
 | 10 | Q&A 질문 글 = 분반 게시글 | (2026-09-09, decisions/6) `questions` - 분반 스코프(`cohort_id`), 작성자 FK(`author_id`), `title` 200자·`content` TEXT 둘 다 필수, 수정 시각 열 없음. 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상(서비스 403). 답변(댓글)·알림은 백로그 - 자식 테이블 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. `ddl-auto: update`가 테이블을 추가하므로 개발 DB 리셋 불필요. |
+| 13 | Q&A 답변 = 질문의 자식 테이블 | (2026-09-14, P2 편입 - qna/design.md 결정 11) `answers(question_id FK, author_id FK, content TEXT, created_at)`. 소속 누구나 작성, 수정 작성자, 삭제 작성자 또는 운영진(서비스 403). 채택·좋아요 열 없음. 질문 삭제 시 서비스 연쇄. 인덱스 `(question_id, created_at)` + `author_id`. Flyway `V4__answers.sql`. |
 | 12 | 차시 = Session 엔티티(부분 승격), 출석 = (차시, 수강생) 기록 | (2026-09-14, P2 - attendance/design.md) `sessions(cohort_id, session_no 유일, title, held_on DATE)` + `attendances((session_id, user_id) 유일, status PRESENT/LATE/ABSENT, checked_at, checked_by)`. **`assignments.session_no` 는 정수 유지(FK 없음)** - P1 과제 슬라이스를 흔들지 않음, 같은 번호 체계로 느슨히 대응(결정 6 재검토 결과). 미확인 = 행 없음. 출석률은 서버 계산(출석 ÷ 판정). 차시 삭제 시 기록 서비스 연쇄. Flyway `V3__attendance.sql`. |
 | 11 | 공지 = 한 테이블, NULL 분반 = 전체 공지 | (2026-09-14, P2 첫 항목 - notice/design.md) `notices` - `cohort_id` **NULL 허용**(NULL = 전체 공지, 값 = 분반 공지), 작성자 FK, `title` 200자·`content` TEXT 필수, `pinned`(필독, 기본 false), 수정 시각 열 없음. 쓰기 권한은 작성자 무관 "관리 권한"(전체: ADMIN / 분반: 운영진 이상). 예약·숨김 상태 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. Flyway `V2__notices.sql` 로 추가(운영 DB 리셋 없음). |
 
@@ -167,6 +168,19 @@ CREATE TABLE attendances (
     CONSTRAINT fk_attendances_user FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT fk_attendances_checked_by FOREIGN KEY (checked_by) REFERENCES users (id)
 ) COMMENT='출석 기록 (결정 12) - 운영진이 차시 단위 일괄 upsert. 출석률(출석 ÷ 판정)은 저장하지 않고 서버가 계산. Flyway V3';
+
+CREATE TABLE answers (
+    id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    question_id BIGINT      NOT NULL COMMENT 'FK → questions.id - 조회는 항상 (id, question_id) 스코프(다른 질문의 답변이면 404)',
+    author_id   BIGINT      NOT NULL COMMENT 'FK → users.id - 작성자. 등록 시 요청자 본인으로 고정',
+    content     TEXT        NOT NULL COMMENT '답변 내용 (최대 10000자, 서비스 검증)',
+    created_at  DATETIME(6) NOT NULL COMMENT '등록 시각(UTC). 수정 시각 열 없음',
+    PRIMARY KEY (id),
+    KEY idx_answers_question_created (question_id, created_at),
+    KEY idx_answers_author (author_id),
+    CONSTRAINT fk_answers_question FOREIGN KEY (question_id) REFERENCES questions (id),
+    CONSTRAINT fk_answers_author FOREIGN KEY (author_id) REFERENCES users (id)
+) COMMENT='Q&A 답변 (결정 13) - 소속 누구나 작성, 수정 작성자, 삭제 작성자 또는 운영진 이상. 질문 삭제 시 서비스 연쇄. Flyway V4';
 ```
 
 ## 3. 계산 규칙 (열로 저장하지 않는 것)

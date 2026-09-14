@@ -27,10 +27,18 @@
 8. **인덱스 2개 명시** - `(cohort_id, created_at)` 복합(목록 조회+정렬을 하나로) + `author_id`. PostgreSQL은 FK 인덱스 자동 생성 없음
 9. **삭제 = 하드 삭제, 연쇄 없음** - 자식 테이블이 아직 없음. Answer 추가 시 서비스 연쇄(answers → question)로 확장 (schema.md 4절 규칙)
 10. **시더에 샘플 2건** - student1·student2 질문. FE가 목록 정렬·작성자 배지·버튼 분기를 바로 확인
+11. **답변(Answer) 편입 (2026-09-14, P2)** - decisions/6 재검토 조건(질문 글 운영 반영) 충족, PM 확정. `answers(question_id, author_id, content, created_at)` 자식 테이블
+    - 답변 권한 = **분반 소속 누구나**(운영진 전용 아님 - 동료 답변 장려) / 수정 작성자만 / 삭제 작성자 또는 운영진 이상 - 질문과 같은 규칙, 사용자가 두 규칙을 외우지 않게
+    - **채택·좋아요 없음** - 요구 없는 상태 모델을 만들지 않음. 필요해지면 열 추가
+    - 정렬 = **오래된 순**(대화 흐름) - 질문 목록(최신순)과 다른 이유: 답변은 위에서 아래로 읽는다
+    - `QuestionResponse.answerCount` - 목록에서 답 없는 질문이 눈에 띄게. 분반 단위 집계 쿼리 1회
+    - 질문 삭제 시 답변은 서비스 연쇄(결정 9 의 "Answer 추가 시 서비스 연쇄" 이행). FE 삭제 경고에 답변 수 표시
+    - API 4개 `/api/cohorts/{cohortId}/questions/{questionId}/answers` (#41~#44, [api.md](api.md) 5절)
 
 ## 3. 후속 작업
 
 - [x] BE: 이슈 #20 → PR #21 머지 (2026-09-09, QuestionApiTest 21건 포함 전체 152건 통과)
 - [x] FE: 질문 목록·상세·작성/수정 화면 - ondal-FE 이슈 #23 → PR #26 머지 (2026-09-14, 실 BE·mock 헤드리스 시나리오 각 18건 통과, [fe.md](fe.md) 매핑 채택). MSW mock은 시더와 동일 데이터
-- [ ] 답변(Answer) 슬라이스 - 요구 확인 후 (decisions/6 재검토 조건)
-- [ ] 알림 - P2 디스코드 알림과 함께
+- [x] 답변(Answer) 슬라이스 BE - 결정 11, ondal-BE 이슈 #35 → PR #36 머지 (2026-09-14, AnswerApiTest 6건 포함 전체 193건 통과, Flyway V4)
+- [ ] 답변 FE - 질문 상세의 답변 영역(목록·작성·인라인 수정·삭제), 목록 "답변 N" ([fe.md](fe.md) 1절)
+- ~~알림~~ - 2026-09-14 PM 확정으로 제외 (mvp-scope 5절)
