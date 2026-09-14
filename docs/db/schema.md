@@ -19,6 +19,7 @@
 | 9 | 문제 번호 = 전역 유일, 1000부터 | (2026-08-26 PM 리뷰, 상세 확정 2026-08-27) 모든 과제는 문제(설문형 포함) - `assignments.problem_no` INT **NOT NULL UNIQUE**. 채번: 폼에서 비우면 자동(현재 최대+1, 1000 시작), 직접 입력하면 그 번호(1000 이상, 중복 409). **수정 허용**(중복 409) - P1 내부용이라 오타 정정 유연성 우선, 혼란은 FE 확인 문구로 방어. 개발 DB 리셋(시더가 번호 포함 재생성). |
 | 10 | Q&A 질문 글 = 분반 게시글 | (2026-09-09, decisions/6) `questions` - 분반 스코프(`cohort_id`), 작성자 FK(`author_id`), `title` 200자·`content` TEXT 둘 다 필수, 수정 시각 열 없음. 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상(서비스 403). 답변(댓글)·알림은 백로그 - 자식 테이블 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. `ddl-auto: update`가 테이블을 추가하므로 개발 DB 리셋 불필요. |
 | 13 | Q&A 답변 = 질문의 자식 테이블 | (2026-09-14, P2 편입 - qna/design.md 결정 11) `answers(question_id FK, author_id FK, content TEXT, created_at)`. 소속 누구나 작성, 수정 작성자, 삭제 작성자 또는 운영진(서비스 403). 채택·좋아요 열 없음. 질문 삭제 시 서비스 연쇄. 인덱스 `(question_id, created_at)` + `author_id`. Flyway `V4__answers.sql`. |
+| 15 | 자동 채점 = 과제의 테스트케이스 + 제출의 채점 결과 1행 | (2026-09-14, P2 - judge/design.md 결정 1·12) `test_cases(assignment_id FK, position, input TEXT, expected_output TEXT, is_public)` - 케이스 1개 이상 = 자동 채점 문제, 별도 problems 테이블 없음. `assignments.time_limit_ms`·`memory_limit_mb`(NULL = 기본 2초·256MB). `judge_results(submission_id PK/FK, status, verdict, passed_cases, total_cases, max_time_ms, max_memory_kb, compile_output TEXT, case_results JSONB, judged_at)` - 제출 1건에 1행, 재채점은 덮어쓰기(채점 이력 없음 - 제출 이력이 이미 append-only). 판정은 Judge0 가 아니라 서버 비교기(줄 끝 공백·마지막 빈 줄 무시). 삭제 연쇄에 두 테이블 포함(4절). Flyway `V6__judge.sql`(구현 시). |
 | 14 | 제출 코멘트 = submissions 의 3열, 점수 열 제거 | (2026-09-14, P2 - submission/design.md 결정 18) `mentor_comment`(V1 예약 열 그대로) + `commented_by`(FK users - 마지막으로 남긴 운영진) + `commented_at`. 세 열은 함께 NULL 이거나 함께 값 - 제출 1건에 코멘트 1개(덮어쓰기), 이력·스레드 없음. **`score` 열 제거** - PM 결정 "점수는 없다, 결과는 채점 엔진이 말한다". 별도 테이블을 두지 않은 이유: 코멘트는 제출의 속성이고 학생은 기존 제출 응답으로 읽는다. Flyway `V5__submission_comment.sql`. |
 | 12 | 차시 = Session 엔티티(부분 승격), 출석 = (차시, 수강생) 기록 | (2026-09-14, P2 - attendance/design.md) `sessions(cohort_id, session_no 유일, title, held_on DATE)` + `attendances((session_id, user_id) 유일, status PRESENT/LATE/ABSENT, checked_at, checked_by)`. **`assignments.session_no` 는 정수 유지(FK 없음)** - P1 과제 슬라이스를 흔들지 않음, 같은 번호 체계로 느슨히 대응(결정 6 재검토 결과). 미확인 = 행 없음. 출석률은 서버 계산(출석 ÷ 판정). 차시 삭제 시 기록 서비스 연쇄. Flyway `V3__attendance.sql`. |
 | 11 | 공지 = 한 테이블, NULL 분반 = 전체 공지 | (2026-09-14, P2 첫 항목 - notice/design.md) `notices` - `cohort_id` **NULL 허용**(NULL = 전체 공지, 값 = 분반 공지), 작성자 FK, `title` 200자·`content` TEXT 필수, `pinned`(필독, 기본 false), 수정 시각 열 없음. 쓰기 권한은 작성자 무관 "관리 권한"(전체: ADMIN / 분반: 운영진 이상). 예약·숨김 상태 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. Flyway `V2__notices.sql` 로 추가(운영 DB 리셋 없음). |
@@ -216,7 +217,7 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 
 - **연쇄 삭제 주체 = 서비스 (DB 아님)**
   - 이유: zip 파일이 DB 밖(디스크)에 있어 DB `ON DELETE CASCADE`만으로는 파일이 잔존
-  - FK는 기본(RESTRICT)으로 유지, 서비스가 파일 → submission_links → submissions → assignments → questions → enrollments → cohort 순서로 삭제
+  - FK는 기본(RESTRICT)으로 유지, 서비스가 파일 → judge_results → submission_links → submissions → test_cases → assignments → questions → enrollments → cohort 순서로 삭제 (judge_results·test_cases 는 2026-09-14 결정 15)
   - RESTRICT = 삭제 순서 누락 시 에러로 알려 주는 안전망
 - **PostgreSQL은 FK 인덱스 자동 생성 없음** (MySQL과 다름) → `idx_assignments_cohort`, `idx_submissions_*`, `idx_submission_links_submission`, `idx_questions_*`은 엔티티에 `@Table(indexes = ...)`로 명시
 - **3종 택1 정합성** (결정 8): 서비스 검증 + DB CHECK 이중 강제 - CHECK는 Flyway 전환 시 추가
@@ -229,7 +230,7 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 
 P2·P3에서 추가 예정 (지금은 그리지 않음 - 결정 시 이 문서에 확장):
 
-- submissions 채점 결과 열: 판정(result)·실행시간·메모리 (P2 Judge0 - 2026-09-14 필수 확정, 설계 judge/ 예정)
+- ~~submissions 채점 결과 열: 판정(result)·실행시간·메모리 (P2 Judge0)~~ → 2026-09-14 결정 15: submissions 열이 아니라 `judge_results` 1:1 테이블 + `test_cases` (judge/design.md)
 - ~~submissions.score·mentor_comment 활성화(멘토 코멘트·점수 P2)~~ → 2026-09-14 결정 14: 코멘트 3열 확정·score 제거 (Flyway V5)
 - OJ 문제 확장: assignments의 `cohort_id` NULL 허용 전환 + 난이도·정답률 열 (P3 - "OJ 문제 = 분반 없는 과제" 원칙, 별도 problems 테이블 없음. 난이도는 티어 시스템의 입력값)
 - 문제 태그: `tags` + 문제-태그 N:M 조인 테이블 (P3 - 관리자 큐레이션 고정 목록, 자유 입력 금지. 탐색 필터·태그별 실력 분석용, 2026-08-25 구상)
