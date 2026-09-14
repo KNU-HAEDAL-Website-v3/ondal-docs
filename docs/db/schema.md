@@ -18,6 +18,7 @@
 | 8 | 제출 형태 = 3종 택1 | (2026-08-26 PM 리뷰) 코드 / 파일 / 링크 중 하나를 골라 제출 - `submissions.type`(CODE\|FILE\|LINK) 열로 저장(조회 단순·택1 CHECK 강제 가능, 응답 type 필드와 1:1). 링크 제출은 `submission_links`(1:N, **1~5개**, `position` 순서 보존)로 다중 입력. 파일 한도 20MB → **10MB**. 기존 개발 DB는 리셋(볼륨 삭제 후 시더 재생성) - 구 모델 행 마이그레이션 없음(샘플뿐). |
 | 9 | 문제 번호 = 전역 유일, 1000부터 | (2026-08-26 PM 리뷰, 상세 확정 2026-08-27) 모든 과제는 문제(설문형 포함) - `assignments.problem_no` INT **NOT NULL UNIQUE**. 채번: 폼에서 비우면 자동(현재 최대+1, 1000 시작), 직접 입력하면 그 번호(1000 이상, 중복 409). **수정 허용**(중복 409) - P1 내부용이라 오타 정정 유연성 우선, 혼란은 FE 확인 문구로 방어. 개발 DB 리셋(시더가 번호 포함 재생성). |
 | 10 | Q&A 질문 글 = 분반 게시글 | (2026-09-09, decisions/6) `questions` - 분반 스코프(`cohort_id`), 작성자 FK(`author_id`), `title` 200자·`content` TEXT 둘 다 필수, 수정 시각 열 없음. 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상(서비스 403). 답변(댓글)·알림은 백로그 - 자식 테이블 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. `ddl-auto: update`가 테이블을 추가하므로 개발 DB 리셋 불필요. |
+| 11 | 공지 = 한 테이블, NULL 분반 = 전체 공지 | (2026-09-14, P2 첫 항목 - notice/design.md) `notices` - `cohort_id` **NULL 허용**(NULL = 전체 공지, 값 = 분반 공지), 작성자 FK, `title` 200자·`content` TEXT 필수, `pinned`(필독, 기본 false), 수정 시각 열 없음. 쓰기 권한은 작성자 무관 "관리 권한"(전체: ADMIN / 분반: 운영진 이상). 예약·숨김 상태 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. Flyway `V2__notices.sql` 로 추가(운영 DB 리셋 없음). |
 
 - 파일 저장: P1은 서버 로컬 디스크
 - S3 등 전환 대비: `stored_path`에 키만 넣으면 되도록 열 설계
@@ -122,6 +123,21 @@ CREATE TABLE questions (
     CONSTRAINT fk_questions_cohort FOREIGN KEY (cohort_id) REFERENCES cohorts (id),
     CONSTRAINT fk_questions_author FOREIGN KEY (author_id) REFERENCES users (id)
 ) COMMENT='Q&A 질문 글 (결정 10) - 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상. 보관 분반에서는 쓰기 409. 답변 테이블은 후속(백로그)';
+
+CREATE TABLE notices (
+    id         BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'PK',
+    cohort_id  BIGINT       NULL COMMENT 'FK → cohorts.id - NULL = 전체 공지(관리자), 값 = 분반 공지(그 분반 운영진 이상). 학생 목록 = 전체 + 소속 분반',
+    author_id  BIGINT       NOT NULL COMMENT 'FK → users.id - 작성자. 등록 시 요청자 본인으로 고정. 소속이 해제돼도 글은 남는다',
+    title      VARCHAR(200) NOT NULL COMMENT '공지 제목',
+    content    TEXT         NOT NULL COMMENT '공지 내용 - 자유 텍스트(최대 10000자, 서비스 검증)',
+    pinned     TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '필독 - 목록 최상단 고정 (실제는 boolean)',
+    created_at DATETIME(6)  NOT NULL COMMENT '등록 시각(UTC). 수정 시각 열 없음 (notice/design.md 결정 8)',
+    PRIMARY KEY (id),
+    KEY idx_notices_cohort_created (cohort_id, created_at),
+    KEY idx_notices_author (author_id),
+    CONSTRAINT fk_notices_cohort FOREIGN KEY (cohort_id) REFERENCES cohorts (id),
+    CONSTRAINT fk_notices_author FOREIGN KEY (author_id) REFERENCES users (id)
+) COMMENT='공지사항 (결정 11) - 전체 공지는 관리자, 분반 공지는 운영진 이상이 등록·수정·삭제(작성자 무관). 보관 분반 공지는 열람 유지·쓰기 409. Flyway V2';
 ```
 
 ## 3. 계산 규칙 (열로 저장하지 않는 것)
@@ -172,7 +188,7 @@ P2·P3에서 추가 예정 (지금은 그리지 않음 - 결정 시 이 문서�
 - 문제 태그: `tags` + 문제-태그 N:M 조인 테이블 (P3 - 관리자 큐레이션 고정 목록, 자유 입력 금지. 탐색 필터·태그별 실력 분석용, 2026-08-25 구상)
 - xp_events 테이블: 경험치 획득 이력 (P3 티어 - mvp-scope 5절 구상 메모)
 - attendance(출석)·Session 엔티티: 출석부 P2 이월 확정(2026-08-25) - 도입 시 `assignments.session_no`를 Session FK로 승격 재검토
-- notices 테이블: 공지사항 P2 (FE 화면 구현 완료 상태)
+- ~~notices 테이블: 공지사항 P2~~ → 2026-09-14 결정 11 로 추가됨 (Flyway V2)
 
 ## 5. 관련 문서
 
