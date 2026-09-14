@@ -110,7 +110,7 @@ flowchart LR
 
 | 항목 | 현재 상태 | 개발 가정 |
 |------|-----------|-----------|
-| 인증 방식 | **확정(2026-09-13)** - 홈페이지 Keycloak OIDC(인가 코드 + PKCE, BE 가 코드 교환), decisions/7 | 운영은 `oidc` 모드, 개발·테스트는 스텁 유지 (prod 에서 스텁은 기동 거부) |
+| 인증 방식 | **확정(2026-09-13)** - 홈페이지 Keycloak OIDC(인가 코드 + PKCE, BE 가 코드 교환), decisions/7. BE·FE 운영 배포 완료(2026-09-14) | 운영은 `oidc` 모드, 개발·테스트는 스텁 유지 (prod 에서 스텁은 기동 거부). FE 도 `VITE_AUTH_MODE` 로 같은 분기 |
 | 부트캠프 2학기 일정·규모 | 교육운영진 확인 중 | 확정 시 마일스톤 날짜 설정 |
 | DB | PostgreSQL 16 확정 - P1 스키마는 docs/db/schema.md | 개발은 로컬 PostgreSQL 기준 |
 

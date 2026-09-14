@@ -1,6 +1,6 @@
 # 7. 홈페이지 SSO - Keycloak OIDC 채택, BE 가 코드를 교환 (결정 5 일부 갱신)
 
-- 날짜: 2026-09-13 · 상태: 확정 (BE 구현 완료 - ondal-BE 이슈 #27 / PR #30)
+- 날짜: 2026-09-13 · 상태: 확정 (BE ondal-BE 이슈 #27 / PR #30 · FE ondal-FE 이슈 #24 / PR #25 - 2026-09-14 운영 배포·브라우저 로그인 검증 완료)
 
 ## 결정
 
@@ -28,7 +28,7 @@
 
 - Keycloak 다운 시 신규 로그인 불가 (기존 세션은 정상) - Discovery 를 첫 사용 시 조회해 앱 기동은 IdP 와 무관
 - 로그인 두 엔드포인트의 실패는 JSON 401 이 아니라 FE `/login?error=코드` 302 - 브라우저 이동이라 불가피. 나머지 API 의 401 계약은 불변
-- 공용 PC 대비 로그아웃은 FE 가 `logoutUrl`(Keycloak end-session) 로 이동해야 완성 - FE 후속
+- 공용 PC 대비 로그아웃은 FE 가 `logoutUrl`(Keycloak end-session) 로 이동해야 완성 - FE 완료 (ondal-FE PR #25: 로그인 방식 `VITE_AUTH_MODE=oidc` 빌드 고정, `/login?error=` 6종 안내, `logoutUrl` 이동)
 - username 변경 시 다른 사람으로 인식 - realm 설정으로 봉인, 추후 필요하면 `users.sub` 열 추가(마이그레이션) 로 전환
 
 ## 재검토 조건
