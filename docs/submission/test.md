@@ -8,6 +8,7 @@
 - `submission/SubmissionApiTest` - `extends ApiTestSupport`, 컨트롤러와 1:1
 - 기존 `assignment/AssignmentApiTest`에 확장분 케이스 추가 - `myStatus`·`submissionCount`·삭제 연쇄
 - 슬라이스 고유 픽스처(`submitCode`, `submitFile`, `submitLink`)는 SubmissionApiTest의 private 헬퍼로 (support/는 PM 파일)
+- `submission/SubmissionCommentApiTest` *(2026-09-14 P2)* - `SubmissionCommentController`(#45~#46)와 1:1, 픽스처는 자체 `createAssignment`·`submitCode` 헬퍼
 - 파일 저장 루트는 `@TempDir` - 테스트 간 파일 잔존 없음, DatabaseCleaner와 별개로 디렉터리 정리 확인
 - multipart 요청: `MockMvc.multipart()` + `request` JSON 파트 + `file` 파트(`MockMultipartFile`)
 
@@ -44,6 +45,13 @@
   - 코드 제출의 파일 다운로드 → 404
 - 보관 분반
   - 제출 → 409 COHORT_ARCHIVED / 이력·상세·다운로드·현황판 → 200 (열람 유지) / restore 후 제출 → 201
+- 제출 코멘트 (SubmissionCommentApiTest, 2026-09-14)
+  - 제출 직후 #20 `comment: null`, #19 `hasComment: false`
+  - STUDENT(본인·타인) PUT → 403 / OPERATOR PUT → 200 + `comment.content`(공백 제거)·`author.title`(교육운영진)·`loginId` 미노출·`commentedAt`
+  - 학생 본인 #20 `comment.content` / #19 `hasComment: true` / 타인 학생 #20 → 여전히 404
+  - 현황판 `latestCommented`: 코멘트 있는 최신 제출 true, 미제출자 false → 학생 재제출 후 false, #19 는 최신순 [false, true]
+  - ADMIN 덮어쓰기 → `author.title` 해구르르 / DELETE 2회 → 204·204(멱등), #20 `comment: null`
+  - 공백만 → 400 INVALID_INPUT / 없는 submissionId → 404 / 보관 분반 PUT·DELETE → 409 COHORT_ARCHIVED, restore 후 → 200
 - 삭제 연쇄 (AssignmentApiTest 확장)
   - 제출물 있는 과제 DELETE → 204, submissions 행·디스크 파일 삭제 확인
   - 제출물 없는 과제 DELETE → 204 (기존 동작 유지)
@@ -52,4 +60,5 @@
 
 - `LocalDataSeeder`(local 전용) 확장: 샘플 과제에 제출 시나리오 4종 - 마감 내 제출 1명·지각 1명·마감 내+추가 1명·미제출 1명 (FE가 배지 4종·현황판을 바로 확인)
 - 코드·링크 제출만 시딩 - zip은 디스크 파일이 필요해 시더 부적합
+- student1 의 1차시 제출에 operator1 코멘트 1건 *(2026-09-14)* - FE 가 코멘트 상자·행 배지·현황판 "남김"을 바로 확인. FE mock 시드와 문구 동일
 - 테스트는 시더 비의존 - 픽스처는 각 테스트가 생성 (규약)

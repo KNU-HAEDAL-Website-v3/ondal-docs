@@ -19,6 +19,7 @@
 | 9 | 문제 번호 = 전역 유일, 1000부터 | (2026-08-26 PM 리뷰, 상세 확정 2026-08-27) 모든 과제는 문제(설문형 포함) - `assignments.problem_no` INT **NOT NULL UNIQUE**. 채번: 폼에서 비우면 자동(현재 최대+1, 1000 시작), 직접 입력하면 그 번호(1000 이상, 중복 409). **수정 허용**(중복 409) - P1 내부용이라 오타 정정 유연성 우선, 혼란은 FE 확인 문구로 방어. 개발 DB 리셋(시더가 번호 포함 재생성). |
 | 10 | Q&A 질문 글 = 분반 게시글 | (2026-09-09, decisions/6) `questions` - 분반 스코프(`cohort_id`), 작성자 FK(`author_id`), `title` 200자·`content` TEXT 둘 다 필수, 수정 시각 열 없음. 조회·등록은 분반 소속 누구나, 수정은 작성자, 삭제는 작성자 또는 운영진 이상(서비스 403). 답변(댓글)·알림은 백로그 - 자식 테이블 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. `ddl-auto: update`가 테이블을 추가하므로 개발 DB 리셋 불필요. |
 | 13 | Q&A 답변 = 질문의 자식 테이블 | (2026-09-14, P2 편입 - qna/design.md 결정 11) `answers(question_id FK, author_id FK, content TEXT, created_at)`. 소속 누구나 작성, 수정 작성자, 삭제 작성자 또는 운영진(서비스 403). 채택·좋아요 열 없음. 질문 삭제 시 서비스 연쇄. 인덱스 `(question_id, created_at)` + `author_id`. Flyway `V4__answers.sql`. |
+| 14 | 제출 코멘트 = submissions 의 3열, 점수 열 제거 | (2026-09-14, P2 - submission/design.md 결정 18) `mentor_comment`(V1 예약 열 그대로) + `commented_by`(FK users - 마지막으로 남긴 운영진) + `commented_at`. 세 열은 함께 NULL 이거나 함께 값 - 제출 1건에 코멘트 1개(덮어쓰기), 이력·스레드 없음. **`score` 열 제거** - PM 결정 "점수는 없다, 결과는 채점 엔진이 말한다". 별도 테이블을 두지 않은 이유: 코멘트는 제출의 속성이고 학생은 기존 제출 응답으로 읽는다. Flyway `V5__submission_comment.sql`. |
 | 12 | 차시 = Session 엔티티(부분 승격), 출석 = (차시, 수강생) 기록 | (2026-09-14, P2 - attendance/design.md) `sessions(cohort_id, session_no 유일, title, held_on DATE)` + `attendances((session_id, user_id) 유일, status PRESENT/LATE/ABSENT, checked_at, checked_by)`. **`assignments.session_no` 는 정수 유지(FK 없음)** - P1 과제 슬라이스를 흔들지 않음, 같은 번호 체계로 느슨히 대응(결정 6 재검토 결과). 미확인 = 행 없음. 출석률은 서버 계산(출석 ÷ 판정). 차시 삭제 시 기록 서비스 연쇄. Flyway `V3__attendance.sql`. |
 | 11 | 공지 = 한 테이블, NULL 분반 = 전체 공지 | (2026-09-14, P2 첫 항목 - notice/design.md) `notices` - `cohort_id` **NULL 허용**(NULL = 전체 공지, 값 = 분반 공지), 작성자 FK, `title` 200자·`content` TEXT 필수, `pinned`(필독, 기본 false), 수정 시각 열 없음. 쓰기 권한은 작성자 무관 "관리 권한"(전체: ADMIN / 분반: 운영진 이상). 예약·숨김 상태 없음. 인덱스 `(cohort_id, created_at)` + `author_id`. Flyway `V2__notices.sql` 로 추가(운영 DB 리셋 없음). |
 
@@ -93,13 +94,15 @@ CREATE TABLE submissions (
     stored_path    VARCHAR(500)  NULL COMMENT 'FILE 전용 - 저장 위치 키. P1은 서버 로컬 디스크, S3 전환 시에도 이 열에 키만',
     file_size      BIGINT        NULL COMMENT 'FILE 전용 - 크기(byte). 한도 10MB (결정 8). 용량 관리·삭제 경고 문구용',
     submitted_at   DATETIME(6)   NOT NULL COMMENT '제출 시각(UTC). due_at과 비교해 지각을 계산한다 - 저장하는 지각 플래그 없음',
-    score          INT           NULL COMMENT '[P2 준비] 점수 - P1에서는 항상 NULL (mvp-scope 5절)',
-    mentor_comment TEXT          NULL COMMENT '[P2 준비] 멘토 코멘트 - P1에서는 항상 NULL',
+    mentor_comment TEXT          NULL COMMENT '운영진 코멘트 (결정 14) - 제출 1건에 1개, 덮어쓰기. 없으면 NULL. 점수 열(score)은 2026-09-14 제거(Flyway V5)',
+    commented_by   BIGINT        NULL COMMENT 'FK → users.id - 마지막으로 코멘트를 남긴(수정한) 운영진. mentor_comment 와 함께 NULL/값',
+    commented_at   DATETIME(6)   NULL COMMENT '코멘트 마지막 변경 시각(UTC). mentor_comment 와 함께 NULL/값',
     PRIMARY KEY (id),
     KEY idx_submissions_assignment_user (assignment_id, user_id, submitted_at),
     KEY idx_submissions_user (user_id),
     CONSTRAINT fk_submissions_assignment FOREIGN KEY (assignment_id) REFERENCES assignments (id),
-    CONSTRAINT fk_submissions_user       FOREIGN KEY (user_id)       REFERENCES users (id)
+    CONSTRAINT fk_submissions_user       FOREIGN KEY (user_id)       REFERENCES users (id),
+    CONSTRAINT fk_submissions_commented_by FOREIGN KEY (commented_by) REFERENCES users (id)
 ) COMMENT='제출 이력 - 재제출마다 행 추가(수정·삭제 없음). 형태는 3종 택1(type). 상태는 계산: 미제출/제출/제출(추가)/지각. 최신 제출 = submitted_at 최대 행';
 
 CREATE TABLE submission_links (
@@ -226,7 +229,8 @@ onTime && late  → 제출(추가)    (초록 계열 - 마감 내 제출 후 추
 
 P2·P3에서 추가 예정 (지금은 그리지 않음 - 결정 시 이 문서에 확장):
 
-- submissions 채점 결과 열: 판정(result)·실행시간·메모리 (P2 Judge0)
+- submissions 채점 결과 열: 판정(result)·실행시간·메모리 (P2 Judge0 - 2026-09-14 필수 확정, 설계 judge/ 예정)
+- ~~submissions.score·mentor_comment 활성화(멘토 코멘트·점수 P2)~~ → 2026-09-14 결정 14: 코멘트 3열 확정·score 제거 (Flyway V5)
 - OJ 문제 확장: assignments의 `cohort_id` NULL 허용 전환 + 난이도·정답률 열 (P3 - "OJ 문제 = 분반 없는 과제" 원칙, 별도 problems 테이블 없음. 난이도는 티어 시스템의 입력값)
 - 문제 태그: `tags` + 문제-태그 N:M 조인 테이블 (P3 - 관리자 큐레이션 고정 목록, 자유 입력 금지. 탐색 필터·태그별 실력 분석용, 2026-08-25 구상)
 - xp_events 테이블: 경험치 획득 이력 (P3 티어 - mvp-scope 5절 구상 메모)

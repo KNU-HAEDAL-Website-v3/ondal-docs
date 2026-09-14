@@ -52,9 +52,11 @@ Submission(제출) = 학생이 과제에 내는 제출물과 그 이력을 다�
 | 20 | 제출 상세 열람 | `GET /api/cohorts/{cohortId}/assignments/{assignmentId}/submissions/{submissionId}` | 본인 또는 운영진 이상 | 200 단건 | 403, 404(타인 제출물·다른 분반 체인 불일치 포함) |
 | 21 | 제출 파일 다운로드 | `GET /api/cohorts/{cohortId}/assignments/{assignmentId}/submissions/{submissionId}/file` | 본인 또는 운영진 이상 | 200 zip 바이너리 + Content-Disposition(원본 파일명) | 403, 404(파일 없는 제출 포함) |
 | 22 | 제출 현황판 | `GET /api/cohorts/{cohortId}/assignments/{assignmentId}/status-board` | 운영진 이상 | 200 학생별 행 목록 | 403, 404 |
+| 45 | 제출 코멘트 남기기·덮어쓰기 *(2026-09-14 P2 - design.md 결정 18)* | `PUT /api/cohorts/{cohortId}/assignments/{assignmentId}/submissions/{submissionId}/comment` | 운영진 이상 | 200 갱신된 제출 상세(`SubmissionResponse`) | 400(빈 내용·5000자 초과), 403, 404(체인 불일치), 409(보관 분반) |
+| 46 | 제출 코멘트 지우기 | `DELETE` 같은 경로 | 운영진 이상 | 204 (없어도 204 - 멱등) | 403, 404, 409(보관 분반) |
 
 - 번호는 기존 API 목록(#1~#17)에 이어 부여. 에러 응답 형식은 guide/design.md 3절 공통
-- 권한 어노테이션: #18~#21 = `@CohortRole(STUDENT)`, #22 = `@CohortRole(OPERATOR)` (ADMIN은 자동 통과)
+- 권한 어노테이션: #18~#21 = `@CohortRole(STUDENT)`, #22·#45·#46 = `@CohortRole(OPERATOR)` (ADMIN은 자동 통과). #45~#46 번호는 공지(#28~#33)·출석(#34~#40)·Q&A 답변(#41~#44) 다음
 - #20·#21의 "본인 또는 운영진"은 어노테이션이 아니라 서비스 판정 - 학생이 타인 submissionId 접근 시 404 (guide 결정 11 존재 비노출)
 - 지각 허용: 마감 후에도 #18은 성공 - 차단 없음, 응답의 `late`로 표시 (flows 3절-1 확정)
 
@@ -72,14 +74,18 @@ Submission(제출) = 학생이 과제에 내는 제출물과 그 이력을 다�
     - CODE → codeText·language 필수 / file 파트·linkUrls 금지
     - FILE → file 파트 필수(zip 확장자·10MB) / codeText·language·linkUrls 금지
     - LINK → linkUrls 1~5개 필수(빈 문자열 불가) / codeText·language·file 파트 금지
-- `SubmissionResponse {id, user: UserSummary, type, codeText, language, fileName, fileSize, links: string[], submittedAt, late}` - #18·#20 응답. `late` = `submittedAt > dueAt` 서버 판정값. `links`는 position 순 URL 배열(LINK 외에는 빈 배열)
-- `SubmissionSummary {id, type, language, fileName, fileSize, links: string[], submittedAt, late}` - #19 목록 응답. codeText 제외(이력 20건 × 코드 전문 수신 방지) - 코드 확인은 #20
-- `StatusBoardRow {user: UserSummary, status, submissionCount, lastSubmittedAt, latestSubmissionId}` - #22 응답. 행 = 현재 STUDENT Enrollment 명단(운영진 먼저 아님 - 이름순), 소속 해제 학생은 제외·데이터는 유지 (schema.md 3절). `latestSubmissionId`(제출 없으면 null) = 운영진이 #20·#21로 진입하는 열람 키 *(2026-08-26 추가, BE PR #15 - FE 연동 중 발견한 계약 누락. "최신 제출 = 대표")*
+- `SubmissionResponse {id, user: UserSummary, type, codeText, language, fileName, fileSize, links: string[], submittedAt, late, comment: SubmissionComment | null}` - #18·#20·#45 응답. `late` = `submittedAt > dueAt` 서버 판정값. `links`는 position 순 URL 배열(LINK 외에는 빈 배열). `comment`는 코멘트 없으면 null *(2026-09-14 추가)*
+- `SubmissionComment {content, author: UserSummary, commentedAt}` - 마지막으로 남긴(수정한) 운영진과 시각. 점수 필드 없음(design.md 결정 18)
+- #45 요청 = `SubmissionCommentRequest {content(필수, 최대 5000자, 앞뒤 공백 제거)}` - JSON
+- `SubmissionSummary {id, type, language, fileName, fileSize, links: string[], submittedAt, late, hasComment}` - #19 목록 응답. codeText 제외(이력 20건 × 코드 전문 수신 방지) - 코드 확인은 #20. `hasComment` = 행 배지용, 내용은 #20 *(2026-09-14 추가)*
+- `StatusBoardRow {user: UserSummary, status, submissionCount, lastSubmittedAt, latestSubmissionId, latestCommented}` - #22 응답. `latestCommented` = 최신 제출에 코멘트가 있는가(제출 없으면 false) - 검토 대기 표시 *(2026-09-14 추가)*. 행 = 현재 STUDENT Enrollment 명단(운영진 먼저 아님 - 이름순), 소속 해제 학생은 제외·데이터는 유지 (schema.md 3절). `latestSubmissionId`(제출 없으면 null) = 운영진이 #20·#21로 진입하는 열람 키 *(2026-08-26 추가, BE PR #15 - FE 연동 중 발견한 계약 누락. "최신 제출 = 대표")*
 
 ## 4. 구현 시 주의 (springdoc에 담기지 않는 내부 규약)
 
 - 스코프 조회는 체인 전부: assignment는 `findByIdAndCohortId`, submission은 `findByIdAndAssignmentId` - 손자 리소스라 두 단계 모두 필수 (guide 4절)
-- #18은 서비스 첫 줄 `cohort.ensureActive()` - 보관 분반 409. #19~#22는 조회라 보관 분반에서도 200 (열람 유지)
+- #18은 서비스 첫 줄 `cohort.ensureActive()` - 보관 분반 409. #19~#22는 조회라 보관 분반에서도 200 (열람 유지). #45·#46 도 `ensureActive()` - 보관 분반의 코멘트 쓰기 409
+- #45·#46 의 제출 조회는 #20 의 `requireViewable` 재사용 - 호출자가 운영진 이상이므로 열람 판정은 항상 통과, 404 는 체인 불일치·부재만. 코멘트 상태는 `Submission.comment(content, by)` / `clearComment()` 두 메서드로만 바뀐다(세 열 동시 갱신)
+- #22 의 `latestCommented` 는 `SubmissionMoment` 프로젝션에 `commented`(`mentor_comment is not null`) 를 실어 추가 쿼리 없이 계산
 - 파일 저장 순서: 검증 → 디스크 저장 → DB insert. DB 실패 시 저장한 파일 삭제 시도(고아 파일 방지). 삭제 연쇄는 역순: 파일 → submission_links → submissions - 파일 먼저 지워야 RESTRICT 안전망이 성립 (schema.md 4절)
 - 저장 루트는 `ondal.upload.dir` 프로퍼티 - 테스트는 `@TempDir` 주입, local 기본값 `./uploads`
 - #21은 `ResponseEntity<Resource>` 반환 - "ResponseEntity 금지" 규약(guide 4절)의 명시적 예외(바이너리 + Content-Disposition 헤더 필요). 파일명은 RFC 5987 인코딩(한글 파일명)

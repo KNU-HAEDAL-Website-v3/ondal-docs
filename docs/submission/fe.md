@@ -8,10 +8,17 @@
 - 과제 상세(`AssignmentDetailPage`)의 제출란 placeholder → 제출 섹션 3단 (폼 → 내 기록 → 현황판)
   - 제출 폼: 탭 = 코드 붙여넣기(+ 언어 셀렉트 **필수**) / zip 업로드(**10MB**) / **링크(+ 버튼으로 1~5개)** - 택1(`type`). 탭 밖 공통 링크 필드 폐지 (design.md 결정 12·13)
   - 제출 = #18 multipart(`request` JSON 파트 + `file` 파트). 선택한 탭의 필수값이 다 차야 버튼 활성(서버 400의 사전 차단), zip·10MB·링크 개수도 클라이언트 선검사
-  - 내 제출 기록 = #19 **표**: 순번 · 제출 형태 · 지각 배지 · 제출 시각 - 채점 결과 열은 P2 자리 예약 (design.md 결정 15). 코드 확인은 행 펼침 → #20, 파일은 #21 다운로드 anchor
+  - 내 제출 기록 = #19 **표**: 순번 · 제출 형태 · 지각 배지 · 제출 시각 - 채점 결과 열은 자동 채점(Judge0) 도입 시 추가 (design.md 결정 15). 코드 확인은 행 펼침 → #20, 파일은 #21 다운로드 anchor. 운영진 코멘트가 달린 행은 형태 칸에 "코멘트" 배지(`hasComment`) *(2026-09-14)*
 - 과제 목록·상세의 상태 배지 → `AssignmentResponse.myStatus` 그대로 매핑 (assignment/fe.md 2절의 보류 해제)
 - 현황판 = **과제 상세 안 운영진 섹션** (#22) - 상태/횟수/최근 제출 표
   - 열람 = `latestSubmissionId`로 최신 제출(대표) 펼침 (#20) - 전체 이력 열람은 P2
+  - "코멘트" 열(`latestCommented` - 남김/아직, 제출 없으면 -) *(2026-09-14, design.md 결정 18)* - 아직 검토하지 않은 최신 제출이 한눈에
+- 운영진 코멘트 상자 = 제출 단건 펼침 뷰(`SubmissionDetailView`) 하단, 내 기록·현황판 공용 *(2026-09-14)*
+  - 표시: 작성 운영진 이름 · 직책 배지 · 마지막 변경 시각(KST) · 내용(줄바꿈 보존)
+  - 운영진(`canComment` = `canManage` && ACTIVE): 코멘트 없으면 작성 폼이 바로 열림(버튼 한 번 덜) → "코멘트 남기기"(#45). 있으면 "수정"(인라인, 같은 #45 덮어쓰기)·"지우기"(confirm "OOO 님 제출에 남긴 코멘트를 지웁니다" → #46)
+  - 학생: 읽기만. 코멘트가 없는 제출은 상자 자체를 그리지 않음(빈 상자 금지)
+  - 작성 초안은 sessionStorage(`ondal-submission-comment-draft:{cohortId}:{assignmentId}:{submissionId}`) - 401 왕복 후 같은 제출을 다시 펼치면 복원. 수정 중 내용은 서버 값이 있어 저장하지 않음
+  - 성공 시 이 분반 과제 캐시 접두사 전체 무효화 - 상세(`comment`)·이력(`hasComment`)·현황판(`latestCommented`)이 함께 갱신
   - 보관 분반에서도 열람 유지: 진입 판정은 `canManage`(ACTIVE 전용)가 아니라 역할(ADMIN 또는 `myRole == OPERATOR`)
   - 홈 `OperatorDashboard`는 분반 단위 집계(제출률·출석률) 화면이라 P1 API로 채울 수 없음 - 목데이터 유지, P2에서 집계 API와 함께
 - 과제 삭제 확인 창: "제출물 N건이 함께 삭제됩니다" - N = `AssignmentResponse.submissionCount`
@@ -33,4 +40,4 @@
 
 - 채점 결과(맞았습니다/틀렸습니다·실행 시간·메모리)는 자동 채점(P2) - `SubmissionsPage` 목데이터의 `result`·`time`·`memory`·`tone` 열이 여기 해당
 - 현황판의 출석률(`attendance`)은 출석부(P2)
-- 멘토 코멘트·점수 표시는 P2 - API 응답에 필드 자체가 없음
+- ~~멘토 코멘트·점수 표시는 P2 - API 응답에 필드 자체가 없음~~ → 2026-09-14 코멘트 도입(1절), 점수는 두지 않음(design.md 결정 18)
