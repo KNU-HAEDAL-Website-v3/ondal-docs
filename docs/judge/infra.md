@@ -7,7 +7,7 @@
 - Judge0 CE **1.13.1** 자체 호스팅: `server`(API :2358) + `workers` + `db`(postgres 13) + `redis`(6) - 공식 compose 그대로, 설정만 우리 값
 - 접근: **Ondal BE 만** - 인터넷·nginx 에 노출하지 않음. `AUTHN_TOKEN` 필수(X-Auth-Token), 제출 코드의 네트워크 차단(`ENABLE_NETWORK=false`, `ALLOW_ENABLE_NETWORK=false`)
 - 파일 단일 원천 = GitHub: `ondal-BE/infra/judge0/`(compose + `judge0.conf.example` + 절차 README) - 서버 안내 가이드 규칙("서버에서 혼자 수정 금지")
-- BE 연결: `.env` 에 `JUDGE0_URL`, `JUDGE0_TOKEN`, `ONDAL_JUDGE_ENGINE=judge0`(없으면 prod 기동 거부 - design.md 결정 6)
+- BE 연결: `.env` 에 `ONDAL_JUDGE_ENGINE=judge0` + `JUDGE0_URL` + `JUDGE0_TOKEN`. 없으면 prod 기본값 **off**(엔진 없음 - 출제·저장 가능, 제출은 채점 대기) - design.md 결정 6. `judge0` 인데 url·token 이 비면 기동 거부
 
 ## 2. 해달 서버 현황 (2026-09-14)
 

@@ -26,7 +26,8 @@
 
 ## 3. 요청·응답 본문 (record DTO)
 
-- `JudgeConfigResponse {enabled, timeLimitMs, memoryLimitMb, defaultTimeLimitMs: 2000, defaultMemoryLimitMb: 256, maxTimeLimitMs, maxMemoryLimitMb, testCases: TestCaseResponse[], affectedSubmissions, rejudgeQueued}`
+- `JudgeConfigResponse {enabled, engineAvailable, timeLimitMs, memoryLimitMb, defaultTimeLimitMs: 2000, defaultMemoryLimitMb: 256, maxTimeLimitMs, maxMemoryLimitMb, maxTestCases, languages: string[], testCases: TestCaseResponse[], affectedSubmissions, rejudgeQueued}`
+  - `engineAvailable` = 엔진 연결 여부 - false(off) 면 FE 는 "저장은 되지만 채점은 엔진 연결 후" 배너, 실행(#49)은 503. `languages` = 지원 언어(FE 셀렉트 문자열)
   - `testCases[] = {id, position, input, expectedOutput, isPublic}` - position 순. 기본값·상한은 폼 안내용(서버 설정을 그대로 내려 FE 하드코딩 방지)
   - `affectedSubmissions` = 이 과제의 CODE 제출 건수(재채점 대상) - #47·#48 모두. `rejudgeQueued` = #48 에서 실제로 큐에 넣은 건수(요청 `rejudge=false` 면 0)
 - #48 요청 `JudgeConfigRequest {timeLimitMs?(null = 기본), memoryLimitMb?(null = 기본), testCases: [{input, expectedOutput, isPublic}], rejudge: boolean}`
@@ -35,7 +36,7 @@
 - #49 요청 `JudgeRunRequest {language, sourceCode, inputs: string[], expectedOutputs?: string[] | null, timeLimitMs?, memoryLimitMb?}` → `JudgeRunResponse {compileOutput | null, runs: [{index, stdout, stderr, verdict | null, timeMs, memoryKb}]}`
   - `expectedOutputs` 가 있으면 `verdict` 를 채움(비교 규칙 = design.md 결정 3), 없으면 null(기대 출력 채우기 용도)
   - 제한을 안 주면 폼의 현재 값이 아니라 기본값 - FE 가 폼 값을 명시해서 보낸다
-- `JudgeSamplesResponse {timeLimitMs, memoryLimitMb, samples: [{position, input, expectedOutput}]}` - 공개 케이스만, 학생 과제 상세 예시 절
+- `JudgeSamplesResponse {enabled, timeLimitMs, memoryLimitMb, languages: string[], samples: [{position, input, expectedOutput}]}` - 공개 케이스만, 학생 과제 상세 예시 절
 - `JudgeResult {status: PENDING|RUNNING|DONE|ERROR, verdict: Verdict | null, passedCases, totalCases, maxTimeMs | null, maxMemoryKb | null, compileOutput | null, cases: JudgeCaseResult[], judgedAt | null}`
   - `Verdict = ACCEPTED | WRONG_ANSWER | TIME_LIMIT | MEMORY_LIMIT | RUNTIME_ERROR | COMPILE_ERROR | JUDGE_ERROR` - `status = DONE` 일 때만 값, `ERROR` 면 `JUDGE_ERROR`
   - `cases[] = {position, verdict, timeMs, memoryKb, isPublic, input?, expectedOutput?, actualOutput?}` - 공개 케이스만 세 텍스트가 실림(각 4KB 로 잘라 `truncated: true`), 비공개는 null. **운영진에게도 같은 규칙**(비공개 입력을 보려면 #47)
@@ -51,7 +52,9 @@
 - Judge0 요청 필드: `source_code`(base64), `language_id`, `stdin`(base64), `cpu_time_limit`(초, = timeLimitMs/1000), `cpu_extra_time 0.5`, `wall_time_limit = cpu × 2 + 1`(최소 1초 - Judge0 1.13 보안 규칙), `memory_limit`(KB), `max_processes_and_or_threads 60`, `enable_network false`, `redirect_stderr_to_stdout false`, `max_file_size 1024`. `expected_output` 은 보내지 않음. 응답 `fields=token,status,stdout,stderr,compile_output,time,memory,exit_code,message`, `base64_encoded=true`
 - Judge0 status → verdict: 3 Accepted·4 Wrong Answer → **둘 다 우리 비교기로 재판정**(expected 를 안 보내므로 4 는 나오지 않음) / 5 → TIME_LIMIT / 6 → COMPILE_ERROR / 7~12 → RUNTIME_ERROR(단, 메모리 초과는 Judge0 가 SIGSEGV·NZEC 로 보고할 수 있어 `memory >= limit` 이면 MEMORY_LIMIT 로 보정) / 13·14·타임아웃 → JUDGE_ERROR
 - 시간·메모리 집계: 케이스 최대값. Judge0 `time` 은 초(float) → ms 반올림, `memory` 는 KB
-- 인증: 모든 Judge0 요청에 `X-Auth-Token`(`ondal.judge.judge0.token`, prod 는 .env). 토큰 없이 prod 기동 거부(인증 모드 `oidc` 와 같은 안전장치)
+- 인증: 모든 Judge0 요청에 `X-Auth-Token`(`ondal.judge.judge0.token`, prod 는 .env). `engine=judge0` 인데 url·token 이 비면 기동 거부. prod 기본 `engine=off`(DisabledJudgeEngine) - 워커는 `available()=false` 면 PENDING 을 건드리지 않고, 엔진 연결 뒤 기동 시 재큐잉(ApplicationReadyEvent)
+- 워커 트랜잭션: AFTER_COMMIT 리스너 안에서는 기본 전파(REQUIRED)가 끝난 트랜잭션에 참여해 커밋되지 않으므로 `TransactionTemplate(REQUIRES_NEW)` 로 RUNNING·DONE 저장. 엔진 호출은 트랜잭션 밖
+- 저장 케이스 결과(`case_results` jsonb) = `[{position, verdict, timeMs, memoryKb, actualOutput(4KB), truncated}]` - 공개 여부·입력·기대 출력은 응답 조립 때 test_cases 에서 position 으로 찾는다(케이스 교체 뒤 결과는 재채점 전까지 stale 일 수 있음)
 - FakeJudgeEngine(local·test): 소스에 `// judge: TLE` 같은 지시 주석이 있으면 그 판정, 없으면 stdin 을 그대로 echo 한 것을 stdout 으로(= 기대 출력을 입력과 같게 두면 ACCEPTED). 테스트에서 케이스별 판정을 결정적으로 만드는 장치
 - 삭제 연쇄: `AssignmentService.delete` → `judgeService.deleteAllOf(assignmentId)`(judge_results → test_cases) 를 제출 삭제 앞뒤에 순서대로(design.md 결정 16)
 - springdoc: `@Tag("Judge")`, 판정·비교 규칙은 `@Schema(description)` 에 명시
