@@ -2,7 +2,7 @@
 
 > 역할: FE 작업자용 - 차시·출석 API 와 화면의 매핑, 표시 규칙
 > 명세: [api.md](api.md) - 계약의 원본은 springdoc `Session`·`Attendance` 태그 · FE 공통 규칙: ondal-FE `CLAUDE.md`
-> 상태: 견본 화면(피그마 28:836 학생 / 28:1013 운영진, `StudentAttendanceView`·`OperatorAttendanceView`)을 실 API 로 교체 - 2026-09-14 진행
+> 상태: 구현 완료 (2026-09-14, ondal-FE PR #32 머지·운영 배포) - 견본 화면(피그마 28:836 학생 / 28:1013 운영진, `StudentAttendanceView`·`OperatorAttendanceView`)을 아래 매핑대로 교체
 
 ## 1. 화면 매핑
 
