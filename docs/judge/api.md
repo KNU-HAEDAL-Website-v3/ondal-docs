@@ -2,6 +2,43 @@
 
 > 결정과 이유는 [design.md](design.md). 번호는 기존 목록(#1~#46)에 이어 #47~#51. 에러 형식은 guide/design.md 3절 공통
 
+## 0. V7 이후 경로 (2026-09-15, judge/design.md 결정 17)
+
+채점 기준(테스트케이스·실행 제한)은 **문제**의 것이라 설정·예시·출제 도구가 문제 스코프로 옮겨졌다.
+아래 1절의 경로는 V7 이전 표기 - 실제 경로는 이 표를 따른다.
+
+| 번호 | 하는 일 | V7 경로 | 권한 |
+|---|---|---|---|
+| 47 | 채점 설정·테스트케이스 조회 | `GET /api/problems/{problemId}/judge` | 운영진 이상(어느 분반에서든) |
+| 48 | 채점 설정 저장(통째 교체) | `PUT /api/problems/{problemId}/judge` | 운영진 이상 |
+| 49 | 출제 도구 실행 | `POST /api/problems/{problemId}/judge/run` | 운영진 이상 |
+| 50 | 공개 예시 | `GET /api/problems/{problemId}/judge/samples` | **로그인 누구나** (분반 미소속 포함) |
+| 51 | 재채점 | `POST /api/cohorts/{cohortId}/assignments/{assignmentId}/judge/rejudge` | 운영진 (과제 스코프 유지) |
+
+### 문제 라이브러리·태그·연습 제출 (신규)
+
+| 번호 | 하는 일 | 경로 | 권한 | 주요 실패 |
+|---|---|---|---|---|
+| 52 | 문제 목록 | `GET /api/problems?tagIds=..` | 로그인 누구나 | - |
+| 53 | 문제 상세 | `GET /api/problems/{problemId}` | 로그인 누구나 | 404 |
+| 54 | 문제 출제 | `POST /api/problems` | 운영진 이상 | 400(제목·번호), 403, 409(번호 중복) |
+| 55 | 문제 수정(전체 교체) | `PUT /api/problems/{problemId}` | 운영진 이상 | 400, 403, 404, 409 |
+| 56 | 문제 삭제 | `DELETE /api/problems/{problemId}` | 운영진 이상 | 403, 404, **409(배정·제출 있음)** |
+| 57 | 태그 목록 | `GET /api/tags` | 로그인 누구나 | - |
+| 58 | 태그 등록 | `POST /api/tags` | **ADMIN** | 400, 403, 409(이름 중복) |
+| 59 | 태그 이름 수정 | `PUT /api/tags/{tagId}` | **ADMIN** | 400, 403, 404, 409 |
+| 60 | 태그 삭제 | `DELETE /api/tags/{tagId}` | **ADMIN** | 403, 404, **409(쓰는 문제 있음)** |
+| 61 | 연습 제출 | `POST /api/problems/{problemId}/submissions` | 로그인 누구나 | 400(언어·코드), 404, **409(케이스 없음)** |
+| 62 | 내 연습 기록 | `GET /api/problems/{problemId}/submissions/my` | 로그인 누구나 | 404 |
+| 63 | 내 연습 제출 단건 | `GET /api/problems/{problemId}/submissions/{submissionId}` | 본인만 | **404(남의 것)** |
+
+- 응답 `ProblemResponse`: `id · problemNo · title · description · tags[] · timeLimitMs · memoryLimitMb · judgeEnabled · assignedCount · solved · createdBy · createdAt · updatedAt · canEdit`
+- 목록 `ProblemSummary` = 위에서 본문·제한·시각·canEdit 제외
+- 연습 제출 응답은 기존 `SubmissionResponse` 재사용 - `late=false`, `comment=null` 고정
+- 과제 응답 `AssignmentResponse` 확장: **`problemId`·`tags[]` 추가**, `title`·`description`·`problemNo` 는 배정된 문제에서 펴서 내려줌
+- 과제 등록·수정 요청은 `{ problemId, sessionNo, dueAt }` - 제목·본문·번호는 문제의 것
+
+
 ## 1. 엔드포인트
 
 | # | 기능 | 메서드 · 경로 | 권한 | 성공 | 주요 실패 |
