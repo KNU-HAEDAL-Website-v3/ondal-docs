@@ -235,8 +235,12 @@ P2·P3에서 추가 예정 (지금은 그리지 않음 - 결정 시 이 문서�
 
 - ~~submissions 채점 결과 열: 판정(result)·실행시간·메모리 (P2 Judge0)~~ → 2026-09-14 결정 15: submissions 열이 아니라 `judge_results` 1:1 테이블 + `test_cases` (judge/design.md)
 - ~~submissions.score·mentor_comment 활성화(멘토 코멘트·점수 P2)~~ → 2026-09-14 결정 14: 코멘트 3열 확정·score 제거 (Flyway V5)
-- OJ 문제 확장: assignments의 `cohort_id` NULL 허용 전환 + 난이도·정답률 열 (P3 - "OJ 문제 = 분반 없는 과제" 원칙, 별도 problems 테이블 없음. 난이도는 티어 시스템의 입력값)
-- 문제 태그: `tags` + 문제-태그 N:M 조인 테이블 (P3 - 관리자 큐레이션 고정 목록, 자유 입력 금지. 탐색 필터·태그별 실력 분석용, 2026-08-25 구상)
+- ~~OJ 문제 확장: assignments의 `cohort_id` NULL 허용 전환 + 난이도·정답률 열 (P3 - "OJ 문제 = 분반 없는 과제" 원칙, 별도 problems 테이블 없음)~~ → 2026-09-15 [결정 16](#) 으로 **원칙 자체가 폐기**되고 `problems` 테이블이 신설됨 (Flyway V7)
+  - 폐기 이유: "분반 없는 과제" 로 두면 재출제가 과제 행 복제가 되고, 복제본끼리 테스트케이스가 갈라져 채점 기준이 어긋남 - 구조상 확정적인 문제였음
+  - 지금 모델: `Problem`(문제 자체 - 번호·본문·제한·테스트케이스·태그) / `Assignment`(배정 - 어느 문제를 어느 분반에 언제까지). 재출제 = 배정 한 줄 추가, 테스트케이스는 공유
+  - 난이도·정답률 열은 아직 없음 (P3 티어 시스템의 입력값으로 남음)
+- ~~문제 태그: `tags` + 문제-태그 N:M 조인 테이블 (P3 - 관리자 큐레이션 고정 목록, 자유 입력 금지)~~ → 2026-09-15 결정 16 으로 추가됨 (Flyway V7: `tags`, `problem_tags`)
+  - 어휘 관리는 ADMIN 전용 유지 - 자유 생성이면 표기가 갈라져 분류가 쓸모없어짐. 목록은 태그 AND 필터 지원
 - xp_events 테이블: 경험치 획득 이력 (P3 티어 - mvp-scope 5절 구상 메모)
 - ~~attendance(출석)·Session 엔티티: 출석부 P2~~ → 2026-09-14 결정 12 로 추가됨 (Flyway V3). `assignments.session_no` 의 FK 승격은 하지 않음(부분 승격) - 재검토 조건은 attendance/design.md 3절
 - ~~notices 테이블: 공지사항 P2~~ → 2026-09-14 결정 11 로 추가됨 (Flyway V2)
