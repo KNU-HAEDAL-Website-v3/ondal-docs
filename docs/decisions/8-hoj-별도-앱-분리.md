@@ -1,6 +1,6 @@
 # 8. HOJ 를 Ondal 에서 떼어 별도 앱으로 분리
 
-- 날짜: 2026-09-15 · 상태: 확정 (1단계 반영 완료, 2단계 배포 대기)
+- 날짜: 2026-09-15 · 갱신 2026-09-18 (도메인 `oj.` 확정, 배포 경로 Pages 로 정리) · 상태: 확정 (1단계 반영 완료, 2단계 도메인 연결 대기)
 - 결정자: PM
 - 관련: [db/schema.md](../db/schema.md) 결정 16(V7 문제 라이브러리) · [judge/design.md](../judge/design.md) 결정 17 · [permissions.md](../permissions.md)
 
@@ -8,7 +8,7 @@
 
 - **Ondal 과 HOJ 는 서로 다른 앱** - 화면·주소를 나눈다
   - Ondal (`ondal.…`): 부트캠프 **운영** - 분반·과제·출석·공지·Q&A
-  - HOJ (`hoj.…`): **문제 은행** - 문제 풀이·출제·태그. 추후 자체 프로그래밍 대회
+  - HOJ (`oj.…`): **문제 은행** - 문제 풀이·출제·태그. 추후 자체 프로그래밍 대회. 호스트명은 `hoj` 대신 짧은 **`oj`** (2026-09-18 PM) - `?app=hoj`·`VITE_APP=hoj`·`HOJ_URL` 같은 **키 이름은 그대로**, 주소만 `oj.haedal-sos-man-in-the-mirror.com`
 - **백엔드는 하나** - 채점·사용자·세션을 두 벌로 만들지 않는다 (BE CLAUDE.md 원칙 1)
 - **코드베이스도 하나** - `VITE_APP` 이 어느 앱으로 빌드할지 고른다. 페이지 컴포넌트는 두 앱이 공유
 
@@ -41,8 +41,12 @@
 
 - ✅ 1단계 - 코드 분리: `lib/apps.ts` 스위치 · `hojRoutes.tsx` · `HojShell` · `dist-hoj` 빌드(`npm run build:hoj`) · BE 다중 오리진 복귀(CORS·`frontend-urls.hoj`)
 - ✅ 1.5단계 - 전환 스위치: `HojRedirect` 로 예전 주소를 경로 그대로 HOJ 로 넘김 (지금은 스위치 OFF 라 운영 동작 변화 없음)
-- ⬜ 2단계 - 배포: Cloudflare Worker `ondal-hoj` 생성(빌드 `npm run build:hoj`, 산출 `dist-hoj`, 도메인 `hoj.…`) → `.env.production` 에 `VITE_HOJ_URL` 한 줄 추가
-  - ※ 순서를 뒤집어 Worker 없이 값부터 넣으면 `/problems` 가 없는 주소로 넘어감
+- ⬜ 2단계 - 배포 (2026-09-18 정리): HOJ 는 Pages 프로젝트 `haedal-hoj-fe` 로 이미 배포된다 - FE `deploy.yml` 의 `deploy-hoj` 잡이 main push 마다 `npm run build:hoj` → `dist-hoj` 를 올림 (2026-09-16 첫 배포, https://haedal-hoj-fe.pages.dev). 남은 순서:
+  1. 대시보드에서 Pages 프로젝트에 커스텀 도메인 **`oj.haedal-sos-man-in-the-mirror.com`** 연결 (org owner 권한 불필요). pages.dev 주소는 세션 쿠키 same-site 밖이라 로그인이 안 되므로 이 단계가 필수
+  2. 서버 `.env` 에 `HOJ_URL=https://oj.…`, `CORS_ORIGINS` 에 `https://oj.…` 반영 후 BE 재기동 (BE 기본값도 `oj.` 로 맞춤 - ondal-BE PR)
+  3. FE `.env.production` 에 `VITE_HOJ_URL=https://oj.…` 한 줄 추가 → Ondal 의 `/problems/*`·`/admin/tags` 가 HOJ 로 넘어감 (ondal-FE 드래프트 PR - 1·2 와 운영 Ondal 배포 파이프라인 복구 뒤 머지)
+  - ※ 순서를 뒤집어 도메인 없이 3 부터 넣으면 `/problems` 가 없는 주소로 넘어감
+  - 경위: 2026-09-16 FE #62 가 "Pages 프로젝트 생성이 막혔다"고 보고 Worker `ondal-hoj` 로 바꿨으나 오판이었다 - 같은 날 #61 의 첫 실행이 `haedal-hoj-fe` 를 생성·배포하는 데 성공한 기록이 있고, Worker 배포는 레포 토큰에 Workers 권한이 없어 실패만 반복했다 → FE #64 에서 Pages 로 되돌림
 
 ## 미결
 

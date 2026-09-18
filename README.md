@@ -5,7 +5,7 @@
 > 🟢 **운영 가동 중** - P1·P2 전부 배포 완료 (2026-09-15). 테스트 주간 2026-09-19~25
 >
 > - Ondal: https://ondal.haedal-sos-man-in-the-mirror.com
-> - HOJ(문제 은행): 별도 앱으로 분리 중 - [결정 8](docs/decisions/8-hoj-%EB%B3%84%EB%8F%84-%EC%95%B1-%EB%B6%84%EB%A6%AC.md)
+> - HOJ(문제 은행): https://oj.haedal-sos-man-in-the-mirror.com (도메인 연결 대기 - 그 전까지는 Ondal 안 `/problems`) - [결정 8](docs/decisions/8-hoj-%EB%B3%84%EB%8F%84-%EC%95%B1-%EB%B6%84%EB%A6%AC.md)
 
 ## 프로젝트 개요
 
