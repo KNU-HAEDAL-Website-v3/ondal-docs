@@ -42,11 +42,14 @@
 - ✅ 1단계 - 코드 분리: `lib/apps.ts` 스위치 · `hojRoutes.tsx` · `HojShell` · `dist-hoj` 빌드(`npm run build:hoj`) · BE 다중 오리진 복귀(CORS·`frontend-urls.hoj`)
 - ✅ 1.5단계 - 전환 스위치: `HojRedirect` 로 예전 주소를 경로 그대로 HOJ 로 넘김 (지금은 스위치 OFF 라 운영 동작 변화 없음)
 - ⬜ 2단계 - 배포 (2026-09-18 정리): HOJ 는 Pages 프로젝트 `haedal-hoj-fe` 로 이미 배포된다 - FE `deploy.yml` 의 `deploy-hoj` 잡이 main push 마다 `npm run build:hoj` → `dist-hoj` 를 올림 (2026-09-16 첫 배포, https://haedal-hoj-fe.pages.dev). 남은 순서:
-  1. 대시보드에서 Pages 프로젝트에 커스텀 도메인 **`oj.haedal-sos-man-in-the-mirror.com`** 연결 (org owner 권한 불필요). pages.dev 주소는 세션 쿠키 same-site 밖이라 로그인이 안 되므로 이 단계가 필수
-  2. 서버 `.env` 에 `HOJ_URL=https://oj.…`, `CORS_ORIGINS` 에 `https://oj.…` 반영 후 BE 재기동 (BE 기본값도 `oj.` 로 맞춤 - ondal-BE PR)
-  3. FE `.env.production` 에 `VITE_HOJ_URL=https://oj.…` 한 줄 추가 → Ondal 의 `/problems/*`·`/admin/tags` 가 HOJ 로 넘어감 (ondal-FE 드래프트 PR - 1·2 와 운영 Ondal 배포 파이프라인 복구 뒤 머지)
+  1. ⬜ 대시보드에서 Pages `haedal-hoj-fe` 에 커스텀 도메인 **`oj.haedal-sos-man-in-the-mirror.com`** 연결 (PM 진행 중). pages.dev 주소는 세션 쿠키 same-site 밖이라 로그인이 안 되므로 이 단계가 필수
+     - Cloudflare 계정이 둘이라 "Setup method" 화면이 뜬다: Pages 프로젝트는 FE 레포 시크릿의 계정에, 존·Worker `ondal-fe`·터널은 관리자 계정에 있음 → **My DNS provider** 선택 → 관리자 계정 DNS 에 `CNAME oj → haedal-hoj-fe.pages.dev`(Proxied) 추가 → Pages Custom domains 에서 Check DNS records → Active
+  2. ✅ 서버 `.env` `HOJ_URL=https://oj.…`, `CORS_ORIGINS` 에 `https://oj.…` + BE 재기동 (2026-09-18 완료 - 운영 API 가 oj. 오리진 preflight 허용 확인). BE 기본값도 `oj.` (ondal-BE #49)
+  3. ⬜ FE `.env.production` 에 `VITE_HOJ_URL=https://oj.…` 한 줄 → Ondal 의 `/problems/*`·`/admin/tags` 가 HOJ 로 넘어감. 1 이 Active 된 뒤 ondal-FE 의 재적용 PR 머지
+     - 2026-09-18 16시 첫 시도(FE #65)가 1 보다 먼저 머지돼 운영 Ondal 의 HOJ 링크가 죽은 주소로 갔고 #67 로 되돌림 - 순서를 지켜야 하는 실제 사례
   - ※ 순서를 뒤집어 도메인 없이 3 부터 넣으면 `/problems` 가 없는 주소로 넘어감
-  - 경위: 2026-09-16 FE #62 가 "Pages 프로젝트 생성이 막혔다"고 보고 Worker `ondal-hoj` 로 바꿨으나 오판이었다 - 같은 날 #61 의 첫 실행이 `haedal-hoj-fe` 를 생성·배포하는 데 성공한 기록이 있고, Worker 배포는 레포 토큰에 Workers 권한이 없어 실패만 반복했다 → FE #64 에서 Pages 로 되돌림
+  - 경위: 2026-09-16 FE #62 가 "Pages 프로젝트 생성이 막혔다"고 보고 Worker `ondal-hoj` 로 바꿨으나 오판이었다(같은 날 #61 실행이 `haedal-hoj-fe` 생성·배포에 성공). Worker 배포는 레포 토큰에 Workers 권한이 없어 실패만 반복 → FE #64 에서 Pages 로 되돌림. 호스트명은 `hoj` 대신 **`oj`** 로 확정(PM, 2026-09-18) - 키 이름(`?app=hoj`·`VITE_APP=hoj`·`HOJ_URL`)은 그대로, 주소만 `oj.`
+  - Ondal 쪽: Worker `ondal-fe` 의 Git 연동 빌드가 9/16~18 끊겼다가 9/18 복구. 그 사이 만든 예비 경로(Actions → Pages `haedal-ondal-fe`)는 유지 - Worker 가 또 끊기면 커스텀 도메인만 옮기면 됨 (FE README 배포 절)
 
 ## 미결
 
