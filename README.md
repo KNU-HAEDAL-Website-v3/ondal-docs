@@ -19,11 +19,7 @@
 | 단계 | 내용 | 상태 |
 |------|------|------|
 | P1 | 로그인(홈페이지 Keycloak SSO), 분반·과제 관리, 제출, 현황 대시보드 | ✅ 운영 가동 |
-<<<<<<< HEAD
-| P2 | 자동 채점(Judge0) · 공지사항 · 출석부 · Q&A 답변 · 제출 코멘트 · 문제 라이브러리(V7)·태그·HOJ · 승인 게이트([결정 10](docs/decisions/10-%EC%8A%B9%EC%9D%B8-%EA%B2%8C%EC%9D%B4%ED%8A%B8-%EC%B2%AB-%EB%A1%9C%EA%B7%B8%EC%9D%B8%EC%9D%80-%EC%8A%B9%EC%9D%B8-%EB%8C%80%EA%B8%B0.md), 2026-09-19) · 문제 은행 100문제 준비([결정 11](docs/decisions/11-%EB%AC%B8%EC%A0%9C-%EC%9D%80%ED%96%89-%EB%82%9C%EC%9D%B4%EB%8F%84-%ED%97%88%EC%9A%A9-%EC%96%B8%EC%96%B4-%EB%B2%88%EB%93%A4-%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0.md) - 난이도·허용 언어·번들 가져오기, 비공개 레포 ondal-problems) · 관리자(MAINTAINER) 전역 역할([결정 12](decisions/12-%EA%B4%80%EB%A6%AC%EC%9E%90-%EC%A0%84%EC%97%AD-%EC%97%AD%ED%95%A0-%ED%95%B4%EA%B5%AC%EB%A5%B4%EB%A5%B4%EC%99%80-%EA%B0%99%EC%9D%80-%EA%B6%8C%ED%95%9C.md), 2026-09-19 - 해구르르와 같은 권한, 유지보수 팀용) | ✅ 운영 가동 (승인 게이트·문제 은행은 배포 대기) |
-=======
-| P2 | 자동 채점(Judge0) · 공지사항 · 출석부 · Q&A 답변 · 제출 코멘트 · 문제 라이브러리(V7)·태그·HOJ · 승인 게이트([결정 10](docs/decisions/10-%EC%8A%B9%EC%9D%B8-%EA%B2%8C%EC%9D%B4%ED%8A%B8-%EC%B2%AB-%EB%A1%9C%EA%B7%B8%EC%9D%B8%EC%9D%80-%EC%8A%B9%EC%9D%B8-%EB%8C%80%EA%B8%B0.md), 2026-09-19) | ✅ 운영 가동 (승인 게이트는 배포 대기) |
->>>>>>> origin/main
+| P2 | 자동 채점(Judge0) · 공지사항 · 출석부 · Q&A 답변 · 제출 코멘트 · 문제 라이브러리(V7)·태그·HOJ · 승인 게이트([결정 10](docs/decisions/10-%EC%8A%B9%EC%9D%B8-%EA%B2%8C%EC%9D%B4%ED%8A%B8-%EC%B2%AB-%EB%A1%9C%EA%B7%B8%EC%9D%B8%EC%9D%80-%EC%8A%B9%EC%9D%B8-%EB%8C%80%EA%B8%B0.md), 2026-09-19) · 문제 은행 100문제 준비([결정 11](docs/decisions/11-%EB%AC%B8%EC%A0%9C-%EC%9D%80%ED%96%89-%EB%82%9C%EC%9D%B4%EB%8F%84-%ED%97%88%EC%9A%A9-%EC%96%B8%EC%96%B4-%EB%B2%88%EB%93%A4-%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0.md) - 난이도·허용 언어·번들 가져오기, 비공개 레포 ondal-problems) · 관리자(MAINTAINER) 전역 역할([결정 12](docs/decisions/12-%EA%B4%80%EB%A6%AC%EC%9E%90-%EC%A0%84%EC%97%AD-%EC%97%AD%ED%95%A0-%ED%95%B4%EA%B5%AC%EB%A5%B4%EB%A5%B4%EC%99%80-%EA%B0%99%EC%9D%80-%EA%B6%8C%ED%95%9C.md), 2026-09-19 - 해구르르와 같은 권한, 유지보수 팀용) | ✅ 운영 가동 (승인 게이트·문제 은행은 배포 대기) |
 | P3 | 리더보드·티어, 대회, 수강 신청 | ⏳ 예정 |
 
 - 알림(디스코드·이메일)과 점수는 **두지 않기로 확정**(2026-09-14) - 코멘트만 남김
