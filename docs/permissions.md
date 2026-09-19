@@ -9,7 +9,7 @@
 
 | 층 | 저장 위치 | 값 | 의미 |
 |---|---|---|---|
-| 전역 역할 | `User.global_role` | `ADMIN` / `MEMBER` | 동아리 임원인가 - **사람에게** 붙는 속성 |
+| 전역 역할 | `User.global_role` | `ADMIN` / `MAINTAINER` / `MEMBER` | 동아리 임원(해구르르)인가, 유지보수 팀(관리자)인가 - **사람에게** 붙는 속성. ADMIN 과 MAINTAINER 는 **권한이 같고 이름만 다르다** ([결정 12](decisions/12-%EA%B4%80%EB%A6%AC%EC%9E%90-%EC%A0%84%EC%97%AD-%EC%97%AD%ED%95%A0-%ED%95%B4%EA%B5%AC%EB%A5%B4%EB%A5%B4%EC%99%80-%EA%B0%99%EC%9D%80-%EA%B6%8C%ED%95%9C.md), 2026-09-19) |
 | 분반 역할 | `Enrollment.role` | `OPERATOR` / `STUDENT` | **이 분반에서** 무엇인가 - 사람-분반 **관계에** 붙는 속성 |
 
 교육 운영진을 전역 등급으로 만들지 않는 이유:
@@ -28,7 +28,7 @@
 
 1. 로그인 여부 → 아니면 `401`
    - 1-1. 승인 상태(`users.status`, 2026-09-19 [결정 10](decisions/10-%EC%8A%B9%EC%9D%B8-%EA%B2%8C%EC%9D%B4%ED%8A%B8-%EC%B2%AB-%EB%A1%9C%EA%B7%B8%EC%9D%B8%EC%9D%80-%EC%8A%B9%EC%9D%B8-%EB%8C%80%EA%B8%B0.md)) → `PENDING` 이면 `403 USER_PENDING` (`GET /api/auth/me` 만 예외 - `@PendingAllowed`). 역할이 있어도 승인 전엔 막힌다
-2. `global_role == ADMIN` 여부 → 맞으면 **통과** (임원은 모든 분반에서 운영자 이상)
+2. `global_role ∈ {ADMIN, MAINTAINER}` 여부 → 맞으면 **통과** (임원·관리자는 모든 분반에서 운영자 이상 - 코드는 `User.isAdmin()` 하나로 판정)
 3. 해당 분반에 대한 Enrollment 존재 여부 → 없으면 `403`
 4. `Enrollment.role`의 API 요구 수준 충족 여부 → 아니면 `403`
 
@@ -43,7 +43,7 @@
 
 ## 3. 권한 매트릭스
 
-| 기능 | 임원진<br>(전역 ADMIN) | 교육 운영진<br>(그 분반 OPERATOR) | 교육생<br>(그 분반 STUDENT) | 미소속 부원 |
+| 기능 | 임원진 · 관리자<br>(전역 ADMIN · MAINTAINER) | 교육 운영진<br>(그 분반 OPERATOR) | 교육생<br>(그 분반 STUDENT) | 미소속 부원 |
 |---|---|---|---|---|
 | 분반 생성·보관, 운영진 지정 | ✅ | ❌ | ❌ | ❌ |
 | 수강생 배정·제외 | ✅ 모든 반 | ✅ 자기 반 | ❌ | ❌ |
@@ -79,6 +79,7 @@
   - 근거: OPERATOR는 분반이 있어야 존재 가능 → 분반 생성 권한은 전역일 수밖에 없음
 - "강사 자원" 절차: 시스템 밖(동아리 의사결정)에서 진행, 시스템은 결과만 기록
   - ADMIN의 분반 생성 화면에서 이름·설명·운영진 지정 일괄 처리 (UC-A1)
+- **관리자(유지보수 팀, 2026-09-19 [결정 12](decisions/12-%EA%B4%80%EB%A6%AC%EC%9E%90-%EC%A0%84%EC%97%AD-%EC%97%AD%ED%95%A0-%ED%95%B4%EA%B5%AC%EB%A5%B4%EB%A5%B4%EC%99%80-%EA%B0%99%EC%9D%80-%EA%B6%8C%ED%95%9C.md))**: 같은 방식의 수동 SQL 로 `global_role = MAINTAINER` - 권한은 ADMIN 과 같고 화면 표시만 "관리자"
 - **최초 관리자(부트스트랩)**: 첫 배포 시 DB에 수동으로 `global_role = ADMIN` 지정 (대상 행은 홈페이지 계정으로 1회 로그인해 생성된 `users` 행 - `login_id` = Keycloak username, 결정 7). 절차는 운영 문서에 기록
 
 ## 5. 수강생 배정과 명부 연동
