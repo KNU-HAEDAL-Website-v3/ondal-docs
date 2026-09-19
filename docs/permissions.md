@@ -27,6 +27,7 @@
 ## 2. 판정 순서 - 모든 API 공통
 
 1. 로그인 여부 → 아니면 `401`
+   - 1-1. 승인 상태(`users.status`, 2026-09-19 [결정 10](decisions/10-%EC%8A%B9%EC%9D%B8-%EA%B2%8C%EC%9D%B4%ED%8A%B8-%EC%B2%AB-%EB%A1%9C%EA%B7%B8%EC%9D%B8%EC%9D%80-%EC%8A%B9%EC%9D%B8-%EB%8C%80%EA%B8%B0.md)) → `PENDING` 이면 `403 USER_PENDING` (`GET /api/auth/me` 만 예외 - `@PendingAllowed`). 역할이 있어도 승인 전엔 막힌다
 2. `global_role == ADMIN` 여부 → 맞으면 **통과** (임원은 모든 분반에서 운영자 이상)
 3. 해당 분반에 대한 Enrollment 존재 여부 → 없으면 `403`
 4. `Enrollment.role`의 API 요구 수준 충족 여부 → 아니면 `403`
@@ -83,7 +84,7 @@
 ## 5. 수강생 배정과 명부 연동
 
 - P1: 운영진 직접 배정. 학생 신청 → 승인 흐름은 P1 제외 ([decisions/0004](decisions/4-%EC%B6%9C%EC%84%9D%EB%B6%80-qna-%EC%88%98%EA%B0%95%EC%8B%A0%EC%B2%AD-p1-%EC%A0%9C%EC%99%B8.md))
-- "명부에서 체크리스트로 배정" UX: 홈페이지의 **회원 명부 조회 API** 제공이 전제 - 로그인 연동(신원 확인)과는 별개 기능
+- ~~"명부에서 체크리스트로 배정" UX: 홈페이지의 **회원 명부 조회 API** 제공이 전제~~ → **2026-09-19 대체**: 홈페이지 API 없이 Ondal 의 부원 목록(`GET /api/users` - 홈페이지로 로그인해 생긴 계정 전부, 승인 상태·소속 요약 포함)에서 체크박스로 고른다 (결정 10, FE 명부 배정 모달)
 - 준회원/정회원 등 회원 상태의 source of truth = 홈페이지
   - Ondal은 읽어서 표시만, 저장 안 함 (이중 저장 = 불일치)
 
@@ -109,3 +110,17 @@
 
 - 태그만 ADMIN 으로 좁힌 이유: 운영진이 자유로 만들면 "DP / 다이나믹프로그래밍 / dp" 로 표기가 갈라져 분류가 쓸모없어짐. **선택은 운영진, 어휘 관리는 관리자**
 - 출제 권한을 넓게(운영진 이상) 둔 근거: "출제는 극소수가 담당한다"(2026-09-15 PM) - 실제 사용자 수가 적어 좁힐 실익이 없음
+
+## 부원 목록·승인 - 승인 게이트 (2026-09-19, [결정 10](decisions/10-%EC%8A%B9%EC%9D%B8-%EA%B2%8C%EC%9D%B4%ED%8A%B8-%EC%B2%AB-%EB%A1%9C%EA%B7%B8%EC%9D%B8%EC%9D%80-%EC%8A%B9%EC%9D%B8-%EB%8C%80%EA%B8%B0.md))
+
+홈페이지(구글) 첫 로그인으로 생긴 계정은 `users.status = PENDING`(승인 대기)이다. 위 매트릭스의 어느 열에도 해당하지 않는다.
+
+| 대상 | 판정 | 어노테이션 |
+|---|---|---|
+| 승인 대기 계정의 모든 API | `403 USER_PENDING` - 예외는 내 정보(`GET /api/auth/me`)와 공개 경로(로그아웃) | 인터셉터 공통 처리 + `@PendingAllowed`(me 에만) |
+| 부원 목록 `GET /api/users` (소속 요약 포함, 승인 대기 먼저, `?status=`) | ADMIN 이거나 **어느 분반에서든 운영진** | `@OperatorAnywhere` |
+| 승인 `POST /api/users/{id}/approve` (멱등) | 위와 같음 - 해구르르 또는 교육운영진 (PM "안 B") | `@OperatorAnywhere` |
+| 분반 배정(수강생 배정·운영진 지정)에 딸린 **자동 승인** | 배정 권한 그대로 (`@CohortRole(OPERATOR)` / `@AdminOnly`) | 서비스에서 `user.approve()` |
+
+- ACTIVE 가 되는 경로: 승인 API · 분반 배정 · 처음부터 ACTIVE 로 생긴 계정(명부 선등록 `findOrCreateMember`, 스텁 로그인, 부트스트랩 관리자)
+- 운영진까지 승인 권한을 준 이유: 첫날 병목 방지. 승인 = "부원 확인" 수준이라 분반 배정과 같은 신뢰 수준
