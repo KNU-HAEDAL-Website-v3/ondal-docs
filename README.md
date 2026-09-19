@@ -5,7 +5,7 @@
 > 🟢 **운영 가동 중** - P1·P2 전부 배포 완료 (2026-09-15). 테스트 주간 2026-09-19~25
 >
 > - Ondal: https://ondal.haedal-sos-man-in-the-mirror.com
-> - HOJ(문제 은행): https://oj.haedal-sos-man-in-the-mirror.com (도메인 연결 대기 - 그 전까지는 Ondal 안 `/problems`) - [결정 8](docs/decisions/8-hoj-%EB%B3%84%EB%8F%84-%EC%95%B1-%EB%B6%84%EB%A6%AC.md)
+> - HOJ(문제 은행): Ondal 안 `/problems` - 같은 앱의 **모드**(사이드바 "HOJ로 이동하기" → 확인 팝업 → HOJ 메뉴) - [결정 9](docs/decisions/9-hoj-ondal-%EB%82%B4%EB%B6%80-%EB%AA%A8%EB%93%9C%EB%A1%9C-%ED%86%B5%ED%95%A9.md) (별도 도메인 `oj.` 분리는 2026-09-19 철회)
 
 ## 프로젝트 개요
 
@@ -32,7 +32,7 @@
 ## 기술 스택
 
 - 백엔드: Spring Boot (Java 21) + PostgreSQL 16 + Flyway (V1~V7)
-- 프론트엔드: React 19 + Vite + TanStack Query + Tailwind - **한 코드베이스에서 Ondal·HOJ 두 앱**이 나옴 (`VITE_APP`)
+- 프론트엔드: React 19 + Vite + TanStack Query + Tailwind - Ondal·HOJ 는 **한 앱 안의 두 모드**(셸만 다름, 결정 9)
 - 인증: 홈페이지 Keycloak OIDC (인가 코드 + PKCE, BE 가 코드 교환) - Ondal 은 비밀번호를 직접 받지 않음
 - 채점 엔진: Judge0 CE - 별도 VM 에서 가동, 판정은 서버 비교기가 함
 
