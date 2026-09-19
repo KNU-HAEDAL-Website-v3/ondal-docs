@@ -51,6 +51,7 @@
 | 7 | [decisions/](docs/decisions/) | 의사결정 기록 - 왜 이렇게 만들었는가 |
 | 8 | [test-week-checklist.md](docs/test-week-checklist.md) | 테스트 주간(9/19~25) 운영 서버 점검 체크리스트 - 역할별 항목, 문제 보고 형식 |
 | 9 | [screens/my-page.md](docs/screens/my-page.md) | 마이페이지 화면 정의 - 기준본(v2.1)에 없는 화면의 기준 (2026-09-19) |
+| 10 | [audit-fe-2026-09-20.md](docs/audit-fe-2026-09-20.md) | 프런트 전수 조사 - 원안(ui-v1) 대비 반영도 · 남은 것 (2026-09-20) |
 
 - [기여 가이드](CONTRIBUTING.md) - 기여 방법, 문서 작성 규칙
 - [행동 강령](CODE_OF_CONDUCT.md)
