@@ -44,6 +44,7 @@ CREATE TABLE users (
     login_id    VARCHAR(50) NOT NULL COMMENT '로그인 ID - 홈페이지 계정과 매칭하는 키(= 홈페이지 Keycloak username, 결정 7). 아직 로그인 안 한 부원도 이 값으로 선등록됨',
     name        VARCHAR(50) NOT NULL COMMENT '표시 이름 - 스텁 로그인에서는 login_id와 동일, 홈페이지 연동 후 실제 이름으로 갱신',
     global_role VARCHAR(20) NOT NULL COMMENT '전역 역할 ADMIN(임원단=해구르르) | MEMBER(일반 부원) - enum은 STRING 저장',
+    status      VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '승인 상태 PENDING(첫 홈페이지 로그인, 승인 대기) | ACTIVE - V8, 결정 10. 운영진 승인 또는 분반 배정으로 ACTIVE, 되돌림 없음',
     created_at  DATETIME(6) NOT NULL COMMENT '생성 시각(UTC) - KST 변환은 프론트 몫',
     PRIMARY KEY (id),
     UNIQUE KEY uk_users_login_id (login_id)
