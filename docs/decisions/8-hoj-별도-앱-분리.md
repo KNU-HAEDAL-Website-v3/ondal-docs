@@ -1,6 +1,7 @@
 # 8. HOJ 를 Ondal 에서 떼어 별도 앱으로 분리
 
-- 날짜: 2026-09-15 · 갱신 2026-09-18 (도메인 `oj.` 확정, 배포 경로 Pages 로 정리) · 상태: 확정 (1단계 반영 완료, 2단계 도메인 연결 대기)
+- 날짜: 2026-09-15 · 갱신 2026-09-18 (도메인 `oj.` 확정, 배포 경로 Pages 로 정리) · **상태: 철회 (2026-09-19)** - [결정 9](9-hoj-ondal-%EB%82%B4%EB%B6%80-%EB%AA%A8%EB%93%9C%EB%A1%9C-%ED%86%B5%ED%95%A9.md) 로 대체. 아래 본문은 기록용
+- ※ 2026-09-19 PM: HOJ 는 Ondal 과 **같은 앱 안의 모드**(메뉴만 다름)로 둔다. 도메인 `oj.`·Pages `haedal-hoj-fe`·스위치 `VITE_HOJ_URL`·`VITE_APP=hoj` 빌드는 더 이상 쓰지 않는다 - 경위와 정리 내용은 결정 9
 - 결정자: PM
 - 관련: [db/schema.md](../db/schema.md) 결정 16(V7 문제 라이브러리) · [judge/design.md](../judge/design.md) 결정 17 · [permissions.md](../permissions.md)
 
