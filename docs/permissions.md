@@ -105,7 +105,7 @@
 | 문제 출제·수정·삭제, 채점 설정·출제 도구 | ADMIN 이거나 **어느 분반에서든 운영진** | `@OperatorAnywhere` |
 | 태그 등록·수정·삭제 | **전역 ADMIN 만** | `@AdminOnly` |
 | 태그 조회 | 로그인한 누구나 | `@LoginOnly` |
-| 깃허브에서 문제 가져오기 `POST /api/problems/import/github` · 설정 조회 `GET` (2026-09-19 밤, 결정 11 보완) | **전역 관리자(ADMIN·MAINTAINER) 만** - 서버가 문제 은행 레포를 읽어 아래와 같은 규칙으로 넣음 | `@AdminOnly` |
+| 깃허브에서 문제 가져오기 `POST /api/problems/import/github` · 설정 조회 `GET` (2026-09-19 밤, 결정 11 보완) | **전역 관리자(ADMIN·MAINTAINER) 만** - 서버가 HOJ 레포를 읽어 아래와 같은 규칙으로 넣음 | `@AdminOnly` |
 | 문제 번들 가져오기 `POST /api/problems/import` (2026-09-19, [결정 11](decisions/11-%EB%AC%B8%EC%A0%9C-%EC%9D%80%ED%96%89-%EB%82%9C%EC%9D%B4%EB%8F%84-%ED%97%88%EC%9A%A9-%EC%96%B8%EC%96%B4-%EB%B2%88%EB%93%A4-%EA%B0%80%EC%A0%B8%EC%98%A4%EA%B8%B0.md)) | **전역 ADMIN 만** - 태그 어휘까지 만들기 때문 | `@AdminOnly` |
 | HOJ 연습 제출 | 로그인한 누구나 - 단 문제에 **허용 언어**(V9)가 걸려 있으면 그 언어만(아니면 400, 과제 제출도 같음) | `@LoginOnly` |
 | 내 연습 제출 조회 | 본인만 - 남의 것은 404(존재 비노출) | `@LoginOnly` + 서비스에서 user 로 좁힘 |

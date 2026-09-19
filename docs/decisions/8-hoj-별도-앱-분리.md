@@ -9,7 +9,7 @@
 
 - **Ondal 과 HOJ 는 서로 다른 앱** - 화면·주소를 나눈다
   - Ondal (`ondal.…`): 부트캠프 **운영** - 분반·과제·출석·공지·Q&A
-  - HOJ (`oj.…`): **문제 은행** - 문제 풀이·출제·태그. 추후 자체 프로그래밍 대회. 호스트명은 `hoj` 대신 짧은 **`oj`** (2026-09-18 PM) - `?app=hoj`·`VITE_APP=hoj`·`HOJ_URL` 같은 **키 이름은 그대로**, 주소만 `oj.haedal-sos-man-in-the-mirror.com`
+  - HOJ (`oj.…`): **해달 온라인 저지** - 문제 풀이·출제·태그. 추후 자체 프로그래밍 대회. 호스트명은 `hoj` 대신 짧은 **`oj`** (2026-09-18 PM) - `?app=hoj`·`VITE_APP=hoj`·`HOJ_URL` 같은 **키 이름은 그대로**, 주소만 `oj.haedal-sos-man-in-the-mirror.com`
 - **백엔드는 하나** - 채점·사용자·세션을 두 벌로 만들지 않는다 (BE CLAUDE.md 원칙 1)
 - **코드베이스도 하나** - `VITE_APP` 이 어느 앱으로 빌드할지 고른다. 페이지 컴포넌트는 두 앱이 공유
 
