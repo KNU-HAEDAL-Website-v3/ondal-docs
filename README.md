@@ -54,6 +54,7 @@
 | 6 | [enrollment/](docs/enrollment/) · [assignment/](docs/assignment/) · [submission/](docs/submission/) · [qna/](docs/qna/) · [notice/](docs/notice/) · [attendance/](docs/attendance/) · [judge/](docs/judge/) | 도메인별 설계·API 명세 (judge = 자동 채점, 서버 구성 infra.md 포함) |
 | 7 | [decisions/](docs/decisions/) | 의사결정 기록 - 왜 이렇게 만들었는가 |
 | 8 | [test-week-checklist.md](docs/test-week-checklist.md) | 테스트 주간(9/19~25) 운영 서버 점검 체크리스트 - 역할별 항목, 문제 보고 형식 |
+| 9 | [screens/my-page.md](docs/screens/my-page.md) | 마이페이지 화면 정의 - 기준본(v2.1)에 없는 화면의 기준 (2026-09-19) |
 
 - [기여 가이드](CONTRIBUTING.md) - 기여 방법, 문서 작성 규칙
 - [행동 강령](CODE_OF_CONDUCT.md)
