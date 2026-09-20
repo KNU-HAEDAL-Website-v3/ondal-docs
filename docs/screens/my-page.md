@@ -13,7 +13,7 @@
 
 | 구역 | 내용 | 데이터 | 비고 |
 |---|---|---|---|
-| 헤더 | 아바타(홈페이지 구글 프로필 사진, 없으면 이름 첫 글자 - [결정 14](decisions/14-%ED%94%84%EB%A1%9C%ED%95%84-%EC%82%AC%EC%A7%84-%ED%99%88%ED%8E%98%EC%9D%B4%EC%A7%80-%EA%B5%AC%EA%B8%80-%ED%94%84%EB%A1%9C%ED%95%84-%EC%97%B0%EB%8F%99.md)) · 이름 · 직책 | `GET /api/auth/me` + `GET /api/me/cohorts` | 직책 = 전역 역할 표시명(해구르르·관리자) > 교육운영진(`canManage` 분반 있음) > 부원. 버튼 없음 - 로그아웃은 사이드바 |
+| 헤더 | 아바타(홈페이지 구글 프로필 사진, 없으면 이름 첫 글자 - [결정 14](../decisions/14-%ED%94%84%EB%A1%9C%ED%95%84-%EC%82%AC%EC%A7%84-%ED%99%88%ED%8E%98%EC%9D%B4%EC%A7%80-%EA%B5%AC%EA%B8%80-%ED%94%84%EB%A1%9C%ED%95%84-%EC%97%B0%EB%8F%99.md)) · 이름 · 직책 | `GET /api/auth/me` + `GET /api/me/cohorts` | 직책 = 전역 역할 표시명(해구르르·관리자) > 교육운영진(`canManage` 분반 있음) > 부원. 버튼 없음 - 로그아웃은 사이드바 |
 | 활동 KPI 4장 | 과제 제출 N건 · HOJ 연습 제출 N건 · 맞힌 문제 N개 · 소속 분반 N개(지난 M개) | `GET /api/me/stats` · `/api/me/cohorts` | 홈 `StatCard` 재사용. 홈은 현재 분반 기준, 여기는 가입 후 누적. 값은 서버 그대로 - 재제출 포함, 맞힌 문제 = 과제·연습 어느 쪽이든 1회 이상 정답 |
 | 내 정보 (1/3) | 이름 · 로그인 아이디 · 가입일(KST 날짜) | `/api/auth/me` · `stats.joinedAt` | 라벨 폭 고정 2열 표. 수정 UI 없음 - 홈페이지(Keycloak)가 원본, 안내 한 줄 |
 | 코드 에디터 테마 (2/3) | 테마 5개(기본 · GitHub Light · One Dark · Dracula · Solarized Light) 카드 - 카드마다 같은 파이썬 5줄을 그 테마로 그린 미리보기 + 라디오 | 브라우저 `localStorage` `ondal-editor-theme` | 서버 저장 없음(취향 설정). 고르면 즉시 모든 에디터(제출 폼 · 정답 코드 · 열람)에 반영. 미리보기는 읽기 전용 - 초점·드래그 안 걸림(`aria-hidden`, `tabindex -1`) |
