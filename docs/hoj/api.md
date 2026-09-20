@@ -58,7 +58,8 @@
 ```
 
 - `nextBeforeId` = 마지막 항목 id, 더 없으면 null. `codeText` 는 내려가지 않는다
-- 채점 중(PENDING/RUNNING)은 `verdict: null`
+- 채점 중(PENDING/RUNNING)은 `verdict: null`. 채점 결과 행이 아예 없는 제출(자동 채점 아닌 문제)은 `judgeStatus`·`verdict`·`passedCases`·`totalCases` 전부 null
+- `size` 가 상한을 넘으면 400 이 아니라 상한(200)으로 자른다 (4절 랭킹도 같음)
 
 ## 3. 사용자 페이지 - `GET /api/hoj/users/{userId}`
 
@@ -81,6 +82,7 @@
 ```
 
 - `stats.solvedCount`·`attemptedCount`·`solvedProblems`·`attemptedProblems`·`tagStats` = 연습·과제 합산(푼 문제 규칙). `submissionCount`·`acceptedCount`·`acceptedRate`·`languages`·`recentSubmissions`·`activity` = **연습 제출만**
+- "채점된 제출"·"시도 중" = `judge_results` 행이 있는 제출(PENDING 포함). `acceptedRate` 는 소수점 버림(15/40 → 37)
 - `activity` = 최근 365일, KST 날짜 기준(`submitted_at at time zone 'Asia/Seoul'`), 제출 0인 날은 생략
 - `rank` = 4절 랭킹의 순위(푼 문제 0개면 null)
 - `solvedProblems`·`attemptedProblems` 는 `problemNo asc`, `tagStats` 는 태그 이름순(total 0 인 태그 생략)
@@ -88,7 +90,8 @@
 ## 4. 랭킹 - `GET /api/hoj/ranking`
 
 - 권한 `@LoginOnly`. 쿼리 `cohortId?` (그 분반 수강생·운영진만) · `size?`(기본 100, 최대 200)
-- 순위 기준: `solvedCount desc` → `lastSolvedAt asc`(같은 수면 먼저 도달한 사람) → `name asc`. 동점은 같은 순위(1,1,3). 푼 문제 0개는 제외
+- 순위 번호는 **`solvedCount` 만으로** 매긴다 - 동점은 같은 순위(1,1,3). 표시 순서는 `solvedCount desc` → `lastSolvedAt asc`(같은 수면 먼저 도달한 사람) → `name asc`. 푼 문제 0개는 제외
+- `lastSolvedAt` = 문제별 첫 ACCEPTED 제출 시각의 최댓값(마지막으로 새 문제를 푼 때). `cohortId` 가 없는 분반이면 404 `NOT_FOUND`
 - 응답
 
 ```json
@@ -118,11 +121,11 @@
 - 테이블 `problem_solutions(id, problem_id, language, code_text, updated_by, updated_at)` + `uk_problem_solutions_problem_language(problem_id, language)` - V11
 - 언어 값은 제출 언어와 같은 표기: `C`, `C++`, `Java`, `Python 3`, `JavaScript`, `TypeScript`
 - `GET` 응답: `[ { "language": "Python 3", "codeText": "...", "updatedBy": { "id": 1, "name": "관리자", "title": "해구르르" }, "updatedAt": "..." } ]` (언어 이름순)
-- `PUT` 본문: `{ "solutions": [ { "language": "Python 3", "codeText": "..." } ] }` - 전체 교체(빈 배열 = 모두 삭제). 최대 6개, 언어 중복 400, 코드 100,000자 이하. 응답 = GET 과 같음
+- `PUT` 본문: `{ "solutions": [ { "language": "Python 3", "codeText": "..." } ] }` - 전체 교체(빈 배열 = 모두 삭제). 최대 6개, 언어 중복·서버 미지원 언어(`ondal.judge.languages` 밖) 400, 코드 1~100,000자. 응답 = GET 과 같음
 - 문제 삭제 시 함께 삭제(서비스에서)
 - **가져오기 연동**
-  - 번들(`POST /api/problems/import`): `ImportProblem.solutions?: [{language, codeText}]` (선택, 최대 6) - `overwrite=true` 면 교체, 새 문제면 저장
-  - 깃허브(`ProblemBankZipReader`): `solutions/sol.<ext>` 를 읽는다. 확장자 → 언어: `py→Python 3`, `c→C`, `cpp|cc→C++`, `java→Java`, `js→JavaScript`, `ts→TypeScript`. 그 밖의 확장자는 무시
+  - 번들(`POST /api/problems/import`): `ImportProblem.solutions?: [{language, codeText}]` (선택, 최대 6) - 필드 없음(null) = 기존 정답 코드 유지, 배열 = 통째 교체(`overwrite=true` 일 때. 새 문제면 저장)
+  - 깃허브(`ProblemBankZipReader`): `solutions/sol.<ext>` 를 읽는다. 확장자 → 언어: `py→Python 3`, `c→C`, `cpp|cc→C++`, `java→Java`, `js→JavaScript`, `ts→TypeScript`. 그 밖의 확장자·빈 파일은 무시. 깃허브 가져오기는 늘 배열로 취급하므로 `overwrite` 때 레포에 `solutions/` 가 없으면 기존 정답 코드도 지워진다(레포가 진실)
   - 문제 은행 레포 `tools/build.py` 도 `solutions` 배열을 번들에 넣는다 (ondal-problems 변경)
 
 ## 7. 북마크 - `PUT/DELETE /api/problems/{id}/bookmark`

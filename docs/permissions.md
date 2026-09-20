@@ -110,6 +110,11 @@
 | HOJ 연습 제출 | 로그인한 누구나 - 단 문제에 **허용 언어**(V9)가 걸려 있으면 그 언어만(아니면 400, 과제 제출도 같음) | `@LoginOnly` |
 | 내 연습 제출 조회 | 본인만 - 남의 것은 404(존재 비노출) | `@LoginOnly` + 서비스에서 user 로 좁힘 |
 | 과제 재채점 | 그 분반 운영진 이상 | `@CohortRole(OPERATOR)` |
+| 채점 현황 피드 `GET /api/hoj/submissions` · 사용자 페이지 `GET /api/hoj/users/{id}` · 랭킹 `GET /api/hoj/ranking` (2026-09-20, [결정 13](decisions/13-hoj-p3-%EB%9E%AD%ED%82%B9-%ED%92%80%EC%9D%B4-%EA%B3%B5%EA%B0%9C-%EC%B1%84%EC%A0%90-%ED%98%84%ED%99%A9-%EC%A0%95%EB%8B%B5-%EC%BD%94%EB%93%9C.md)) | 로그인한 누구나 - 이름·활동만 보이고 `loginId` 는 어디에도 없음 | `@LoginOnly` |
+| 다른 사람 풀이 `GET /api/problems/{id}/accepted-solutions` (결정 13) | **그 문제를 맞힌 사람** 또는 운영진 이상 - 아니면 403 `NOT_SOLVED` | `@LoginOnly` + 서비스 판정 |
+| 정답 코드(참고 풀이) `GET/PUT /api/problems/{id}/solutions` (결정 13) | ADMIN 이거나 어느 분반에서든 운영진 - 학생에게는 존재도 안 보임(`solutionLanguages` 가 `[]`) | `@OperatorAnywhere` |
+| 북마크 `PUT/DELETE /api/problems/{id}/bookmark` (결정 13) | 로그인한 누구나 - 본인 것만 | `@LoginOnly` |
+| 내 입력으로 실행 `POST /api/problems/{id}/run` (결정 13) | 로그인한 누구나 - 사용자당 분당 10회, 초과 429 `TOO_MANY_REQUESTS`. 운영진용 `/judge/run` 은 그대로 | `@LoginOnly` |
 
 - 태그만 ADMIN 으로 좁힌 이유: 운영진이 자유로 만들면 "DP / 다이나믹프로그래밍 / dp" 로 표기가 갈라져 분류가 쓸모없어짐. **선택은 운영진, 어휘 관리는 관리자**
 - 출제 권한을 넓게(운영진 이상) 둔 근거: "출제는 극소수가 담당한다"(2026-09-15 PM) - 실제 사용자 수가 적어 좁힐 실익이 없음
